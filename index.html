@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>寶可夢淘汰賽樹狀圖產生器</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="logo-mark" aria-hidden="true">
+      <span class="ball"></span>
+    </div>
+    <div class="header-text">
+      <h1>寶可夢淘汰賽樹狀圖產生器</h1>
+      <p class="subtitle">單淘汰賽對戰表 · 8強 / 16強 / 32強</p>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="controls no-print" id="controls">
+      <div class="control-row">
+        <label for="sizeSelect">賽事規模</label>
+        <select id="sizeSelect" aria-label="選擇賽事規模">
+          <option value="8">8強</option>
+          <option value="16" selected>16強</option>
+          <option value="32">32強</option>
+        </select>
+      </div>
+      <div class="control-row buttons">
+        <button type="button" id="btnAutoSeed" class="btn btn-secondary">自動填入種子編號</button>
+        <button type="button" id="btnGenerate" class="btn btn-primary">產生對戰表</button>
+        <button type="button" id="btnReset" class="btn btn-danger">重置全部</button>
+        <button type="button" id="btnPrint" class="btn btn-secondary">列印</button>
+      </div>
+      <p class="hint">提示：點選每位選手旁的「晉級」按鈕可推進到下一輪；「清除」可取消該場結果並連帶清除後續輪次。資料會自動儲存在瀏覽器本機。</p>
+    </section>
+
+    <section class="entry-panel no-print" id="entryPanel">
+      <h2>第一輪選手資料</h2>
+      <div id="entryGrid" class="entry-grid"></div>
+    </section>
+
+    <section class="bracket-section" id="bracketSection">
+      <div class="bracket-toolbar no-print">
+        <h2>對戰樹狀圖</h2>
+        <span id="bracketStatus" class="status-pill">尚未產生</span>
+      </div>
+      <div class="bracket-scroll">
+        <div id="bracket" class="bracket" role="region" aria-label="淘汰賽對戰表"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer no-print">
+    <p>純前端靜態頁面 · 可直接開啟 index.html 或部署至 GitHub Pages</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
