@@ -490,26 +490,220 @@ body {
 }
 .app-footer p { margin: 0; }
 
+
+html.print-measure .btn-advance,
+html.print-measure .btn-clear-match,
+html.print-measure .controls,
+html.print-measure .entry-panel,
+html.print-measure .bracket-toolbar,
+html.print-measure .app-footer { display: none !important; }
+html.print-measure .bracket-side { gap: 2.5mm; }
+html.print-measure body.size-16 .player-meta { display: none !important; }
+html.print-measure body.size-32 .player-meta { display: none !important; }
+html.print-measure body.size-32 .player-name { font-size: 5pt; }
+html.print-measure body.size-32 .player-row { padding: 0.15mm 0.4mm; min-height: 0; }
+html.print-measure body.size-32 .round { min-width: 24mm; }
+html.print-measure body.size-32 .round-title { font-size: 5pt; padding: 0.2mm 0.6mm; margin-bottom: 0.4mm; }
+html.print-measure body.size-32 .match-stack,
+html.print-measure body.size-32 .match-pair-group { gap: 0.25mm; }
+html.print-measure body.size-32 .bracket-side { gap: 1mm; }
+
 @media print {
-  @page { size: landscape; margin: 6mm; }
-  body {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  html, body {
     background: #fff !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  .no-print, .app-footer, .btn-advance, .btn-clear-match { display: none !important; }
-  .app-header { box-shadow: none; border-bottom: 1px solid #ccc; padding: 0.4rem 0.6rem; }
-  .app-header h1 { font-size: 1rem; }
-  .subtitle { font-size: 0.75rem; }
-  .app-main { max-width: none; padding: 0.2rem; }
-  .bracket-section { box-shadow: none; border: 1px solid #ddd; margin: 0; padding: 0.35rem; }
-  .bracket-scroll { overflow: visible; }
+
+  .no-print,
+  .app-footer,
+  .btn,
+  .btn-advance,
+  .btn-clear-match,
+  .controls,
+  .entry-panel,
+  .bracket-toolbar {
+    display: none !important;
+  }
+
+  .app-header {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: none !important;
+    border: none !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 0 0 2mm 0 !important;
+    margin: 0 0 2mm 0 !important;
+    background: #fff !important;
+  }
+  .logo-mark .ball {
+    width: 18px !important;
+    height: 18px !important;
+    border-width: 1.5px !important;
+  }
+  .logo-mark .ball::after {
+    width: 6px !important;
+    height: 6px !important;
+    margin: -3px 0 0 -3px !important;
+    border-width: 1.5px !important;
+  }
+  .app-header h1 {
+    font-size: 11pt !important;
+    margin: 0 !important;
+  }
+  .subtitle {
+    font-size: 7.5pt !important;
+    margin: 0 !important;
+  }
+
+  .app-main {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .bracket-section {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .bracket-scroll {
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-scale-wrap {
+    /* zoom affects layout/pagination in Chromium (unlike transform) */
+    zoom: var(--print-scale, 1);
+    width: max-content;
+    margin: 0 auto;
+  }
+
   .bracket-mirror {
-    transform-origin: top center;
-    /* JS may set --print-scale */
-    transform: scale(var(--print-scale, 0.72));
+    gap: 0 !important;
+    padding: 0 !important;
+    min-width: 0 !important;
   }
-  .player-row, .match-pair, .champion-card { break-inside: avoid; }
+
+  .bracket-side { gap: 2.5mm !important; }
+  .bracket-center {
+    padding: 0 3mm !important;
+    gap: 3mm !important;
+    min-width: 0 !important;
+  }
+
+  .round { min-width: 0 !important; max-width: none !important; }
+  .round-title {
+    font-size: 7pt !important;
+    padding: 0.8mm 1.5mm !important;
+    margin-bottom: 1.5mm !important;
+  }
+
+  .match {
+    min-height: 0 !important;
+    padding: 0.4mm 0 !important;
+  }
+  .match-stack, .match-pair-group { gap: 1.2mm !important; }
+  .match-pair {
+    box-shadow: none !important;
+    border-width: 0.6pt !important;
+  }
+
+  .player-row {
+    min-height: 0 !important;
+    padding: 0.6mm 1mm !important;
+    gap: 0.8mm !important;
+  }
+  .seed-num { font-size: 6.5pt !important; width: 3.5mm !important; }
+  .player-name { font-size: 7pt !important; }
+  .player-meta { font-size: 5.5pt !important; }
+  .placeholder-text { font-size: 6.5pt !important; }
+
+  .center-label { font-size: 6.5pt !important; margin-bottom: 1mm !important; }
+  .champion-card { padding: 2mm !important; }
+  .champion-label { font-size: 6pt !important; }
+  .champion-name { font-size: 8pt !important; }
+  .champion-meta { font-size: 6pt !important; }
+  .champion-empty { font-size: 7pt !important; }
+
+  /* Connector lines stay visible, slightly thinner */
+  .bracket-side.left .match::after,
+  .bracket-side.right .match::before,
+  .bracket-side.left .match-pair-group::after,
+  .bracket-side.right .match-pair-group::before {
+    background: #64748b !important;
+  }
+  .bracket-side.left .match::after,
+  .bracket-side.right .match::before {
+    width: 2.5mm !important;
+  }
+  .bracket-side.left .match::after { right: -2.5mm !important; }
+  .bracket-side.right .match::before { left: -2.5mm !important; }
+  .bracket-side.left .match-pair-group::after {
+    right: -2.5mm !important;
+    width: 0.6pt !important;
+  }
+  .bracket-side.right .match-pair-group::before {
+    left: -2.5mm !important;
+    width: 0.6pt !important;
+  }
+
+  /* Per-size compact defaults (JS fine-tunes --print-scale) */
+  body.size-8 { --slot-w: 42mm; }
+  body.size-8 .player-row { padding: 1mm 1.2mm !important; }
+  body.size-8 .player-name { font-size: 8pt !important; }
+  body.size-8 .round { min-width: 42mm !important; }
+
+  body.size-16 { --slot-w: 34mm; }
+  body.size-16 .round { min-width: 34mm !important; }
+  body.size-16 .player-meta { display: none !important; } /* name+seed only to save height */
+  body.size-16 .player-row { min-height: 5.5mm !important; }
+
+  body.size-32 { --slot-w: 24mm; }
+  body.size-32 .round { min-width: 24mm !important; max-width: 26mm !important; }
+  body.size-32 .player-meta { display: none !important; }
+  body.size-32 .player-name { font-size: 5pt !important; line-height: 1.1 !important; }
+  body.size-32 .seed-num { font-size: 5pt !important; width: 2.8mm !important; }
+  body.size-32 .player-row { padding: 0.15mm 0.4mm !important; min-height: 0 !important; }
+  body.size-32 .round-title { font-size: 5pt !important; padding: 0.2mm 0.6mm !important; margin-bottom: 0.4mm !important; }
+  body.size-32 .match { padding: 0.1mm 0 !important; }
+  body.size-32 .match-stack, body.size-32 .match-pair-group { gap: 0.25mm !important; }
+  body.size-32 .bracket-side { gap: 1mm !important; }
+  body.size-32 .bracket-center { padding: 0 1.5mm !important; gap: 1.5mm !important; }
+  body.size-32 .champion-card { padding: 0.8mm !important; }
+  body.size-32 .champion-label { font-size: 5pt !important; }
+  body.size-32 .champion-name { font-size: 6pt !important; }
+  body.size-32 .placeholder-text { font-size: 5pt !important; }
+  body.size-32 .bracket-side.left .match::after,
+  body.size-32 .bracket-side.right .match::before { width: 1mm !important; }
+  body.size-32 .bracket-side.left .match::after { right: -1mm !important; }
+  body.size-32 .bracket-side.right .match::before { left: -1mm !important; }
+  body.size-32 .bracket-side.left .match-pair-group::after { right: -1mm !important; }
+  body.size-32 .bracket-side.right .match-pair-group::before { left: -1mm !important; }
+
+  .player-row, .match-pair, .champion-card, .match {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .bracket-section, .bracket-scroll, .print-scale-wrap, .bracket-mirror {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
 }
 
 @media (max-width: 720px) {
