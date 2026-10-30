@@ -349,7 +349,8 @@
 
       var title = document.createElement("div");
       title.className = "round-title";
-      title.textContent = ROUND_LABELS[rs] || rs + "強";
+      // Side round with `rs` players corresponds to tournament round of `rs*2`
+      title.textContent = ROUND_LABELS[rs * 2] || rs * 2 + "強";
       roundEl.appendChild(title);
 
       var matches = rs / 2;
