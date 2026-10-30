@@ -382,7 +382,7 @@ body {
 
 /* ===== Bracket elbows (SVG): stub → vertical joiner → out ===== */
 .bracket-side {
-  --elbow-w: 1.85rem;
+  --elbow-w: 2.4rem;
   gap: 0; /* elbows sit between rounds */
 }
 .match-pair { position: relative; }
@@ -419,8 +419,8 @@ body {
 
 .mpg-elbow {
   --el-color: #64748b;
-  --el-thick: 2px;
-  --el-join-x: 62%; /* joiner sits in the gap; stubs are longer */
+  --el-thick: 2.5px;
+  --el-join-x: 72%; /* joiner sits in the gap; stubs are longer */
   flex: 0 0 var(--elbow-w);
   width: var(--elbow-w);
   align-self: stretch;
@@ -773,11 +773,11 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
   .champion-empty { font-size: 7.5pt !important; }
 
   /* Elbow connectors (solid backgrounds) */
-  .bracket-side { gap: 0 !important; --elbow-w: 5.5mm !important; }
+  .bracket-side { gap: 0 !important; --elbow-w: 7.5mm !important; }
   .mpg-elbow { --el-thick: 1.2pt !important; --el-color: #64748b !important; }
   .mpg-elbow.to-center {
-    flex-basis: 7mm !important;
-    width: 7mm !important;
+    flex-basis: 9mm !important;
+    width: 9mm !important;
   }
   .mpg-elbow > span {
     background: #64748b !important;
@@ -795,7 +795,7 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
 
   body.size-8 { --slot-w: 52mm; }
   body.size-8 .round { min-width: 52mm !important; }
-  body.size-8 .bracket-side { gap: 0 !important; --elbow-w: 6.5mm !important; }
+  body.size-8 .bracket-side { gap: 0 !important; --elbow-w: 9mm !important; }
   body.size-8 .bracket-center { padding: 0 6mm !important; }
   body.size-8 .player-name { font-size: 9pt !important; }
   body.size-8 .player-row { padding: 1.6mm 1.8mm !important; }
@@ -812,7 +812,7 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
   body.size-32 .seed-num { font-size: 5.5pt !important; }
   body.size-32 .player-row { padding: 0.5mm 0.8mm !important; }
   body.size-32 .round-title { font-size: 6pt !important; margin-bottom: 1mm !important; }
-  body.size-32 .bracket-side { gap: 0 !important; --elbow-w: 4mm !important; }
+  body.size-32 .bracket-side { gap: 0 !important; --elbow-w: 5.5mm !important; }
 
   .player-row, .match-pair, .champion-card, .match {
     break-inside: avoid;
