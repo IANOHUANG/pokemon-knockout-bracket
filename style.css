@@ -380,42 +380,55 @@ body {
   flex: 1;
 }
 
-/* Connectors — left side (lines go right toward center) */
+/* Connectors: horizontal stubs from each card → vertical join (mirrored) */
 .match-pair { position: relative; }
+.bracket-side {
+  --stub: 1.1rem;
+}
+.bracket-side.left .round {
+  padding-right: var(--stub);
+}
+.bracket-side.right .round {
+  padding-left: var(--stub);
+}
 .bracket-side.left .match-pair::after {
   content: "";
   position: absolute;
   top: 50%;
-  right: -1.25rem;
-  width: 1.25rem;
-  height: 1px;
+  right: calc(-1 * var(--stub));
+  width: var(--stub);
+  height: 2px;
+  margin-top: -1px;
   background: var(--connector);
-  z-index: 0;
+  z-index: 1;
+  pointer-events: none;
 }
-.bracket-side.left .round:not(:last-child) .match-pair-group {
+.bracket-side.left .match-pair-group {
   position: relative;
 }
 .bracket-side.left .match-pair-group::after {
   content: "";
   position: absolute;
-  right: -1.25rem;
+  right: 0;
   top: 25%;
   bottom: 25%;
-  width: 1px;
+  width: 2px;
   background: var(--connector);
   pointer-events: none;
+  z-index: 0;
 }
 
-/* Connectors — right side (mirrored, lines go left toward center) */
 .bracket-side.right .match-pair::before {
   content: "";
   position: absolute;
   top: 50%;
-  left: -1.25rem;
-  width: 1.25rem;
-  height: 1px;
+  left: calc(-1 * var(--stub));
+  width: var(--stub);
+  height: 2px;
+  margin-top: -1px;
   background: var(--connector);
-  z-index: 0;
+  z-index: 1;
+  pointer-events: none;
 }
 .bracket-side.right .match-pair-group {
   position: relative;
@@ -423,19 +436,16 @@ body {
 .bracket-side.right .match-pair-group::before {
   content: "";
   position: absolute;
-  left: -1.25rem;
+  left: 0;
   top: 25%;
   bottom: 25%;
-  width: 1px;
+  width: 2px;
   background: var(--connector);
   pointer-events: none;
+  z-index: 0;
 }
 
-/* Hide stubs on the round closest to center (side final feeds into center via center connectors) */
-.bracket-side.left .round.is-side-final .match-pair::after,
-.bracket-side.right .round.is-side-final .match-pair::before {
-  width: 1.25rem;
-}
+/* Side-final still draws stubs toward center; no vertical join needed */
 .bracket-side.left .round.is-side-final .match-pair-group::after,
 .bracket-side.right .round.is-side-final .match-pair-group::before {
   display: none;
@@ -501,8 +511,8 @@ html.print-measure .entry-panel,
 html.print-measure .bracket-toolbar,
 html.print-measure .app-footer { display: none !important; }
 html.print-measure .bracket-mirror {
-  min-height: var(--print-target-h, 170mm);
-  height: var(--print-target-h, 170mm);
+  min-height: var(--print-target-h, 0);
+  height: var(--print-target-h, auto);
   align-items: stretch;
 }
 html.print-measure .bracket-side {
@@ -536,7 +546,7 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
 @media print {
   @page {
     size: A4 landscape;
-    margin: 8mm;
+    margin: 10mm;
   }
 
   html, body {
@@ -582,21 +592,27 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
     padding: 0 !important;
     background: transparent !important;
   }
-  .bracket-scroll { overflow: visible !important; padding: 0 !important; margin: 0 !important; }
+  .bracket-scroll {
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
 
   .print-scale-wrap {
     zoom: var(--print-scale, 1);
     width: max-content;
     max-width: 100%;
-    margin: 0 auto;
+    margin: 0 auto !important;
   }
 
   .bracket-mirror {
     gap: 0 !important;
     padding: 0 !important;
     min-width: 0 !important;
-    min-height: var(--print-target-h, 170mm) !important;
-    height: var(--print-target-h, 170mm) !important;
+    min-height: var(--print-target-h, 0) !important;
+    height: var(--print-target-h, auto) !important;
     align-items: stretch !important;
   }
 
@@ -670,7 +686,10 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
   .champion-meta { font-size: 6.5pt !important; }
   .champion-empty { font-size: 7.5pt !important; }
 
-  /* Connectors from card centers */
+  /* Connectors: stubs meet vertical joins */
+  .bracket-side { --stub: 3.2mm !important; }
+  .bracket-side.left .round { padding-right: var(--stub) !important; }
+  .bracket-side.right .round { padding-left: var(--stub) !important; }
   .bracket-side.left .match-pair::after,
   .bracket-side.right .match-pair::before,
   .bracket-side.left .match-pair-group::after,
@@ -679,19 +698,20 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
   }
   .bracket-side.left .match-pair::after,
   .bracket-side.right .match-pair::before {
-    width: 3mm !important;
+    width: var(--stub) !important;
+    height: 1.2pt !important;
   }
-  .bracket-side.left .match-pair::after { right: -3mm !important; }
-  .bracket-side.right .match-pair::before { left: -3mm !important; }
+  .bracket-side.left .match-pair::after { right: calc(-1 * var(--stub)) !important; }
+  .bracket-side.right .match-pair::before { left: calc(-1 * var(--stub)) !important; }
   .bracket-side.left .match-pair-group::after {
-    right: -3mm !important;
-    width: 0.7pt !important;
+    right: 0 !important;
+    width: 1.2pt !important;
     top: 25% !important;
     bottom: 25% !important;
   }
   .bracket-side.right .match-pair-group::before {
-    left: -3mm !important;
-    width: 0.7pt !important;
+    left: 0 !important;
+    width: 1.2pt !important;
     top: 25% !important;
     bottom: 25% !important;
   }
@@ -715,13 +735,7 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
   body.size-32 .seed-num { font-size: 5.5pt !important; }
   body.size-32 .player-row { padding: 0.5mm 0.8mm !important; }
   body.size-32 .round-title { font-size: 6pt !important; margin-bottom: 1mm !important; }
-  body.size-32 .bracket-side { gap: 2mm !important; }
-  body.size-32 .bracket-side.left .match-pair::after,
-  body.size-32 .bracket-side.right .match-pair::before { width: 2mm !important; }
-  body.size-32 .bracket-side.left .match-pair::after { right: -2mm !important; }
-  body.size-32 .bracket-side.right .match-pair::before { left: -2mm !important; }
-  body.size-32 .bracket-side.left .match-pair-group::after { right: -2mm !important; }
-  body.size-32 .bracket-side.right .match-pair-group::before { left: -2mm !important; }
+  body.size-32 .bracket-side { gap: 2mm !important; --stub: 2.4mm !important; }
 
   .player-row, .match-pair, .champion-card, .match {
     break-inside: avoid;
