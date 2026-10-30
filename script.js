@@ -482,75 +482,92 @@
     return mm * px;
   }
 
-  /** Fill printable area on both axes with CSS zoom (single A4 landscape page). */
-  function fitPrintScale() {
+  /** Optimal print scale: min(availW/w, availH/h) with ~10mm page margins + safety. */
+  function resetPrintLayout() {
     var wrap = el.printWrap || el.bracket;
+    if (!wrap || !el.bracket) return;
     wrap.style.setProperty("--print-scale", "1");
     wrap.style.width = "";
     wrap.style.height = "";
     wrap.style.overflow = "";
+    wrap.style.margin = "";
     el.bracket.style.minHeight = "";
     el.bracket.style.height = "";
     document.documentElement.style.removeProperty("--print-target-h");
+    document.documentElement.classList.remove("print-measure");
+    document.body.classList.remove("is-printing");
+  }
 
+  function fitPrintScale() {
+    var wrap = el.printWrap || el.bracket;
+    resetPrintLayout();
+    document.body.classList.add("is-printing");
     document.documentElement.classList.add("print-measure");
     updateSizeClass();
 
-    var availW = mmToPx(279);
+    // A4 landscape, 10mm margins → 277×190mm printable
+    var availW = mmToPx(277);
     var headerEl = document.querySelector(".app-header");
-    var headerH = headerEl ? headerEl.getBoundingClientRect().height : mmToPx(11);
-    var availH = Math.max(mmToPx(192) - headerH, mmToPx(160));
+    var headerH = headerEl ? headerEl.getBoundingClientRect().height : mmToPx(10);
+    // Use ~96% of printable height so header+bracket stay inside 10mm-margin page
+    var availH = Math.max((mmToPx(190) - headerH) * 0.96, mmToPx(145));
 
+    // Natural size at print layout (no forced height)
+    el.bracket.style.minHeight = "";
+    el.bracket.style.height = "";
+    document.documentElement.style.removeProperty("--print-target-h");
     void el.bracket.offsetHeight;
+
     var bw = el.bracket.scrollWidth;
     var bh = Math.max(el.bracket.scrollHeight, 1);
     if (!bw) {
       document.documentElement.classList.remove("print-measure");
-      wrap.style.setProperty("--print-scale", "0.9");
-      return 0.9;
+      wrap.style.setProperty("--print-scale", "0.85");
+      return 0.85;
     }
 
-    // Match page aspect: stretch height so bw/bh ≈ availW/availH when content is too short
-    var targetH = (bw * availH) / availW;
-    if (targetH > bh) {
-      el.bracket.style.minHeight = targetH + "px";
-      el.bracket.style.height = targetH + "px";
-      document.documentElement.style.setProperty("--print-target-h", targetH + "px");
+    // If short vs page aspect, stretch gaps so we can fill height after scale
+    var idealH = (bw * availH) / availW;
+    if (idealH > bh * 1.08) {
+      document.documentElement.style.setProperty("--print-target-h", idealH + "px");
+      el.bracket.style.minHeight = idealH + "px";
+      el.bracket.style.height = idealH + "px";
       void el.bracket.offsetHeight;
       bw = el.bracket.scrollWidth;
       bh = Math.max(el.bracket.scrollHeight, 1);
     }
 
-    var scale = Math.min(availW / bw, availH / bh) * 0.96;
-    scale = Math.max(0.3, Math.min(scale, 1.5));
+    // Fill best axis; extra safety against page-2 / edge clipping
+    var scale = Math.min(availW / bw, availH / bh) * 0.99;
+    scale = Math.max(0.28, Math.min(scale, 1.35));
 
-    // Final stretch so zoomed size fills avail box
+    // Re-stretch so zoomed height lands on availH (fills page height)
     var layoutH = availH / scale;
+    document.documentElement.style.setProperty("--print-target-h", layoutH + "px");
     el.bracket.style.minHeight = layoutH + "px";
     el.bracket.style.height = layoutH + "px";
-    document.documentElement.style.setProperty("--print-target-h", layoutH + "px");
 
     document.documentElement.classList.remove("print-measure");
     wrap.style.setProperty("--print-scale", String(scale.toFixed(4)));
+    wrap.dataset.printScale = String(scale.toFixed(4));
     return scale;
   }
 
   function preparePrint() {
     updateSizeClass();
-    // Ensure bracket exists
     if (!el.bracket.children.length) {
       renderBracket();
     }
-    fitPrintScale();
+    return fitPrintScale();
   }
 
   function renderBracket() {
+    resetPrintLayout();
     el.bracket.innerHTML = "";
     el.bracket.appendChild(renderSide("L"));
     el.bracket.appendChild(renderCenter());
     el.bracket.appendChild(renderSide("R"));
     updateSizeClass();
-    fitPrintScale();
     el.status.textContent = "已產生 · " + state.size + "強（左右對開）";
     el.status.classList.add("ready");
   }
@@ -657,12 +674,14 @@
     el.sizeSelect.addEventListener("change", onSizeChange);
 
     el.printWrap = document.getElementById("printScaleWrap") || el.bracket;
+    el.bracketScroll = document.querySelector(".bracket-scroll");
     window.addEventListener("beforeprint", preparePrint);
-    // Some browsers fire matchMedia instead of/in addition to beforeprint
+    window.addEventListener("afterprint", resetPrintLayout);
     if (window.matchMedia) {
       var mq = window.matchMedia("print");
       var onMq = function (e) {
         if (e.matches) preparePrint();
+        else resetPrintLayout();
       };
       if (mq.addEventListener) mq.addEventListener("change", onMq);
       else if (mq.addListener) mq.addListener(onMq);
