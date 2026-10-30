@@ -8,12 +8,10 @@
 </head>
 <body>
   <header class="app-header">
-    <div class="logo-mark" aria-hidden="true">
-      <span class="ball"></span>
-    </div>
+    <div class="logo-mark" aria-hidden="true"><span class="ball"></span></div>
     <div class="header-text">
       <h1>IANO PTCG Bracket Builder</h1>
-      <p class="subtitle">寶可夢卡牌單淘汰賽對戰表 · 8強 / 16強 / 32強</p>
+      <p class="subtitle">寶可夢卡牌單淘汰賽 · 左右對開樹狀對戰表 · 8 / 16 / 32 強</p>
     </div>
   </header>
 
@@ -28,16 +26,15 @@
         </select>
       </div>
       <div class="control-row buttons">
-        <button type="button" id="btnAutoSeed" class="btn btn-secondary">自動填入種子編號</button>
         <button type="button" id="btnGenerate" class="btn btn-primary">產生對戰表</button>
         <button type="button" id="btnReset" class="btn btn-danger">重置全部</button>
         <button type="button" id="btnPrint" class="btn btn-secondary">列印</button>
       </div>
-      <p class="hint">提示：點選每位選手旁的「晉級」按鈕可推進到下一輪；「清除」可取消該場結果並連帶清除後續輪次。資料會自動儲存在瀏覽器本機。</p>
+      <p class="hint">種子由系統依列自動分配（#1～#N）。左側為種子 1 半區、右側為種子 2 半區，冠軍戰於中央。點「晉級」推進；「清除」或改選會連帶清除後續結果。</p>
     </section>
 
     <section class="entry-panel no-print" id="entryPanel">
-      <h2>第一輪選手資料</h2>
+      <h2>選手資料 <span class="h2-sub">（種子自動編號）</span></h2>
       <div id="entryGrid" class="entry-grid"></div>
     </section>
 
@@ -47,7 +44,7 @@
         <span id="bracketStatus" class="status-pill">尚未產生</span>
       </div>
       <div class="bracket-scroll">
-        <div id="bracket" class="bracket" role="region" aria-label="淘汰賽對戰表"></div>
+        <div id="bracket" class="bracket-mirror" role="region" aria-label="左右對開淘汰賽對戰表"></div>
       </div>
     </section>
   </main>
