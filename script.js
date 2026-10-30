@@ -329,7 +329,18 @@
     return elbow;
   }
 
+  function currentZoom() {
+    var wrap = document.getElementById("printScaleWrap");
+    if (!wrap) return 1;
+    var z = parseFloat(getComputedStyle(wrap).zoom);
+    if (!z || !isFinite(z) || z <= 0) {
+      z = parseFloat(wrap.dataset.printScale || wrap.style.getPropertyValue("--print-scale")) || 1;
+    }
+    return z > 0 ? z : 1;
+  }
+
   function layoutElbows() {
+    var zoom = currentZoom();
     var groups = document.querySelectorAll(".match-pair-group");
     for (var i = 0; i < groups.length; i++) {
       var group = groups[i];
@@ -337,33 +348,33 @@
       var elbow = group.querySelector(".mpg-elbow");
       if (!body || !elbow) continue;
 
-      // Clear any previous fixed height from older layout passes
       elbow.style.height = "";
 
       var cards = body.querySelectorAll(".match-pair");
       var eRect = elbow.getBoundingClientRect();
+      // getBoundingClientRect is post-zoom; CSS px is pre-zoom
+      var toCss = function (v) { return v / zoom; };
 
       if (elbow.classList.contains("is-fork") && cards.length >= 2) {
         var c0 = cards[0].getBoundingClientRect();
         var c1 = cards[cards.length - 1].getBoundingClientRect();
-        var y0 = c0.top + c0.height / 2 - eRect.top;
-        var y1 = c1.top + c1.height / 2 - eRect.top;
+        var y0 = toCss(c0.top + c0.height / 2 - eRect.top);
+        var y1 = toCss(c1.top + c1.height / 2 - eRect.top);
         if (y1 < y0) {
           var tmp = y0;
           y0 = y1;
           y1 = tmp;
         }
         var mid = (y0 + y1) / 2;
-        // Pixel tops — robust under flex shrink / print zoom
         elbow.style.setProperty("--y0", y0 + "px");
         elbow.style.setProperty("--y1", y1 + "px");
         elbow.style.setProperty("--ymid", mid + "px");
         elbow.style.setProperty("--join-h", y1 - y0 + "px");
       } else {
-        var midY = eRect.height / 2;
+        var midY = toCss(eRect.height) / 2;
         if (cards[0]) {
           var cr = cards[0].getBoundingClientRect();
-          midY = cr.top + cr.height / 2 - eRect.top;
+          midY = toCss(cr.top + cr.height / 2 - eRect.top);
         }
         elbow.style.setProperty("--ymid", midY + "px");
       }
@@ -374,7 +385,7 @@
     if (finalWrap && finalRow) {
       var fr = finalRow.getBoundingClientRect();
       var mr = finalWrap.getBoundingClientRect();
-      var py = mr.top + mr.height / 2 - fr.top;
+      var py = (mr.top + mr.height / 2 - fr.top) / zoom;
       finalRow.style.setProperty("--rail-y", py + "px");
     }
   }
