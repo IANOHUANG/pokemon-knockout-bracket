@@ -347,6 +347,7 @@
     clearBtn.type = "button";
     clearBtn.className = "btn btn-sm btn-clear-match no-print";
     clearBtn.textContent = "清除";
+    clearBtn.setAttribute("aria-label", "清除此場晉級結果與後續依賴");
     clearBtn.title = "清除此場晉級結果與後續依賴";
     clearBtn.addEventListener("click", onClear);
     matchEl.appendChild(clearBtn);
