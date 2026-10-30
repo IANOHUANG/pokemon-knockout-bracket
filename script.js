@@ -307,6 +307,78 @@
     return row;
   }
 
+  function makeElbow(side, mode) {
+    // mode: "fork" (2 feeders) | "line" (single feeder / side-final)
+    // Solid-background divs so print-color-adjust keeps lines visible.
+    var elbow = document.createElement("div");
+    elbow.className =
+      "mpg-elbow side-" +
+      (side === "L" ? "L" : "R") +
+      (mode === "line" ? " is-line" : " is-fork");
+    elbow.setAttribute("aria-hidden", "true");
+
+    if (mode === "fork") {
+      elbow.innerHTML =
+        '<div class="el-stub top"></div>' +
+        '<div class="el-stub bot"></div>' +
+        '<div class="el-join"></div>' +
+        '<div class="el-out"></div>';
+    } else {
+      elbow.innerHTML = '<div class="el-thru"></div>';
+    }
+    return elbow;
+  }
+
+  function layoutElbows() {
+    var groups = document.querySelectorAll(".match-pair-group");
+    for (var i = 0; i < groups.length; i++) {
+      var group = groups[i];
+      var body = group.querySelector(".mpg-body");
+      var elbow = group.querySelector(".mpg-elbow");
+      if (!body || !elbow) continue;
+
+      // Clear any previous fixed height from older layout passes
+      elbow.style.height = "";
+
+      var cards = body.querySelectorAll(".match-pair");
+      var eRect = elbow.getBoundingClientRect();
+
+      if (elbow.classList.contains("is-fork") && cards.length >= 2) {
+        var c0 = cards[0].getBoundingClientRect();
+        var c1 = cards[cards.length - 1].getBoundingClientRect();
+        var y0 = c0.top + c0.height / 2 - eRect.top;
+        var y1 = c1.top + c1.height / 2 - eRect.top;
+        if (y1 < y0) {
+          var tmp = y0;
+          y0 = y1;
+          y1 = tmp;
+        }
+        var mid = (y0 + y1) / 2;
+        // Pixel tops — robust under flex shrink / print zoom
+        elbow.style.setProperty("--y0", y0 + "px");
+        elbow.style.setProperty("--y1", y1 + "px");
+        elbow.style.setProperty("--ymid", mid + "px");
+        elbow.style.setProperty("--join-h", y1 - y0 + "px");
+      } else {
+        var midY = eRect.height / 2;
+        if (cards[0]) {
+          var cr = cards[0].getBoundingClientRect();
+          midY = cr.top + cr.height / 2 - eRect.top;
+        }
+        elbow.style.setProperty("--ymid", midY + "px");
+      }
+    }
+
+    var finalWrap = document.querySelector(".final-match-wrap .match-pair");
+    var finalRow = document.querySelector(".final-row");
+    if (finalWrap && finalRow) {
+      var fr = finalRow.getBoundingClientRect();
+      var mr = finalWrap.getBoundingClientRect();
+      var py = mr.top + mr.height / 2 - fr.top;
+      finalRow.style.setProperty("--rail-y", py + "px");
+    }
+  }
+
   function renderMatch(players, winner, onPick, onClear) {
     var matchEl = document.createElement("div");
     matchEl.className = "match";
@@ -356,23 +428,22 @@
       var matches = rs / 2;
       var stack = document.createElement("div");
       stack.className = "match-stack";
+      var isSideFinal = rs === 2;
 
-      // Group consecutive matches in pairs for vertical connectors (when >1 match)
       var group = null;
+      var body = null;
       for (var m = 0; m < matches; m++) {
-        if (matches > 1) {
-          if (m % 2 === 0) {
-            group = document.createElement("div");
-            group.className = "match-pair-group";
-            stack.appendChild(group);
-          }
-        } else {
+        var startGroup = matches === 1 || m % 2 === 0;
+        if (startGroup) {
           group = document.createElement("div");
           group.className = "match-pair-group";
+          body = document.createElement("div");
+          body.className = "mpg-body";
+          group.appendChild(body);
           stack.appendChild(group);
         }
 
-        (function (roundSize, matchIndex) {
+        (function (roundSize, matchIndex, bodyEl) {
           var players = getSideMatchPlayers(side, roundSize, matchIndex);
           var winner = state.winners[wKey(side, roundSize, matchIndex)] || null;
           var matchEl = renderMatch(
@@ -389,8 +460,20 @@
               renderBracket();
             }
           );
-          group.appendChild(matchEl);
-        })(rs, m);
+          bodyEl.appendChild(matchEl);
+        })(rs, m, body);
+
+        var endGroup = matches === 1 || m % 2 === 1 || m === matches - 1;
+        if (endGroup) {
+          var feederCount = body.childElementCount;
+          var mode = feederCount >= 2 ? "fork" : "line";
+          // Side-final always draws toward center (line or still fork if 2 somehow)
+          if (isSideFinal) mode = feederCount >= 2 ? "fork" : "line";
+          var elbow = makeElbow(side, mode);
+          if (isSideFinal) elbow.classList.add("to-center");
+          // Left: body then elbow (toward center/right). Right: elbow then body visually via CSS order
+          group.appendChild(elbow);
+        }
       }
 
       roundEl.appendChild(stack);
@@ -414,7 +497,18 @@
 
     var finalists = [leftFinalist(), rightFinalist()];
     var finalWinner = state.winners["final"] || null;
-    finalBlock.appendChild(
+    var finalRow = document.createElement("div");
+    finalRow.className = "final-row";
+
+    var railL = document.createElement("div");
+    railL.className = "final-in-rail left";
+    railL.setAttribute("aria-hidden", "true");
+    railL.innerHTML = '<div class="rail-line"></div>';
+    finalRow.appendChild(railL);
+
+    var finalWrap = document.createElement("div");
+    finalWrap.className = "final-match-wrap";
+    finalWrap.appendChild(
       renderMatch(
         finalists,
         finalWinner,
@@ -430,6 +524,23 @@
         }
       )
     );
+    finalRow.appendChild(finalWrap);
+
+    var railR = document.createElement("div");
+    railR.className = "final-in-rail right";
+    railR.setAttribute("aria-hidden", "true");
+    railR.innerHTML = '<div class="rail-line"></div>';
+    finalRow.appendChild(railR);
+
+    finalBlock.appendChild(finalRow);
+
+    // Stem down to champion
+    var stem = document.createElement("div");
+    stem.className = "final-to-champ";
+    stem.setAttribute("aria-hidden", "true");
+    stem.innerHTML = '<div class="rail-line vertical"></div>';
+    finalBlock.appendChild(stem);
+
     center.appendChild(finalBlock);
 
     // Champion
@@ -499,6 +610,7 @@
   }
 
   function fitPrintScale() {
+    layoutElbows();
     var wrap = el.printWrap || el.bracket;
     resetPrintLayout();
     document.body.classList.add("is-printing");
@@ -550,6 +662,7 @@
     document.documentElement.classList.remove("print-measure");
     wrap.style.setProperty("--print-scale", String(scale.toFixed(4)));
     wrap.dataset.printScale = String(scale.toFixed(4));
+    layoutElbows();
     return scale;
   }
 
@@ -570,6 +683,10 @@
     updateSizeClass();
     el.status.textContent = "已產生 · " + state.size + "強（左右對開）";
     el.status.classList.add("ready");
+    requestAnimationFrame(function () {
+      layoutElbows();
+      requestAnimationFrame(layoutElbows);
+    });
   }
 
   function generate() {
