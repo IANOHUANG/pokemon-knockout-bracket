@@ -283,16 +283,41 @@ body {
 .bracket-side.right { flex-direction: row; } /* rounds already ordered outer→inner or inner→outer in JS */
 
 .bracket-center {
+  /* Same column rhythm as a .round: title row + match-stack body.
+     Equal flex halves inside .center-body → final-row on SF line level. */
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: stretch;
-  gap: 1.25rem;
+  gap: 0;
   padding: 0;
   min-width: 200px;
-  align-self: center;
+  align-self: stretch;
+  min-height: 0;
 }
-.bracket-center .final-block,
+.bracket-center > .center-label.round-title {
+  /* Share .round-title box metrics so body aligns with match-stacks */
+  margin-bottom: 0.75rem;
+  flex: 0 0 auto;
+}
+.center-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.center-upper {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.center-lower {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+}
 .bracket-center .champion-block {
   width: 100%;
 }
@@ -511,19 +536,33 @@ body {
   width: auto;
 }
 
-/* Final inbound rails + stem to champion */
+/* Final inbound rails + stem to champion.
+   final-row is the midline flex item between center-upper / center-lower. */
 .final-row {
   display: flex;
   align-items: center;
   width: 100%;
   gap: 0;
   position: relative;
+  flex: 0 0 auto;
+  z-index: 1;
 }
-.final-match-wrap { flex: 0 1 auto; min-width: 0; }
+.final-match-wrap {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 230px;
+  width: 100%;
+}
+.final-match-wrap .match {
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 0;
+  margin-bottom: 0; /* avoid shifting final off SF midline / opening stem gap */
+}
 .final-in-rail {
   flex: 1 1 1.25rem;
   min-width: 1rem;
-  max-width: 2.75rem;
+  max-width: none; /* fill gap to SF elbows */
   align-self: stretch;
   position: relative;
   pointer-events: none;
@@ -543,14 +582,18 @@ body {
 .final-to-champ {
   display: flex;
   justify-content: center;
-  height: 0.85rem;
+  align-items: stretch;
+  height: 0.9rem;
+  flex: 0 0 auto;
   pointer-events: none;
 }
 .final-to-champ .rail-line.vertical {
-  width: 2px;
+  width: 2.5px;
   height: 100%;
   background: #64748b;
   border: none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 /* Center final + champion */
@@ -560,11 +603,15 @@ body {
   letter-spacing: 0.06em;
   color: var(--text-muted);
   text-align: center;
-  margin-bottom: 0.35rem;
 }
-.final-block, .champion-block {
+.bracket-center > .center-label.round-title {
+  /* round-title already provides bg/border/padding; keep muted weight */
+  letter-spacing: 0.06em;
+}
+.champion-block {
   width: 100%;
   max-width: 230px;
+  margin: 0 auto;
 }
 .champion-card {
   border: 1px solid #fde68a;
@@ -726,11 +773,29 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
   }
   .bracket-center {
     padding: 0 !important;
-    gap: 4mm !important;
+    gap: 0 !important;
     min-width: 0 !important;
-    align-self: center !important;
-    justify-content: center !important;
+    align-self: stretch !important;
+    height: 100% !important;
     align-items: stretch !important;
+  }
+  .bracket-center > .center-label.round-title {
+    margin-bottom: 1.5mm !important;
+    flex: 0 0 auto !important;
+  }
+  .center-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .center-upper,
+  .center-lower {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+  }
+  .final-row {
+    flex: 0 0 auto !important;
   }
 
   .round {
@@ -810,9 +875,9 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
     print-color-adjust: exact !important;
   }
   .final-in-rail {
-    flex: 1 1 5mm !important;
-    min-width: 4mm !important;
-    max-width: 10mm !important;
+    flex: 1 1 4mm !important;
+    min-width: 3mm !important;
+    max-width: none !important;
   }
   .final-in-rail .rail-line,
   .final-to-champ .rail-line.vertical {
@@ -820,7 +885,9 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  .final-to-champ { height: 3mm !important; }
+  .final-to-champ { height: 4mm !important; }
+  .final-match-wrap { max-width: none !important; }
+  .center-label { margin-bottom: 1mm !important; }
 
   body.size-8 { --slot-w: 52mm; }
   body.size-8 .round { min-width: 52mm !important; }
