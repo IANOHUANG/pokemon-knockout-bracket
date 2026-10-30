@@ -468,10 +468,58 @@
     return center;
   }
 
+  function updateSizeClass() {
+    document.body.classList.remove("size-8", "size-16", "size-32");
+    document.body.classList.add("size-" + state.size);
+  }
+
+  function mmToPx(mm) {
+    var probe = document.createElement("div");
+    probe.style.cssText = "position:absolute;left:-9999px;width:100mm;height:100mm;";
+    document.body.appendChild(probe);
+    var px = probe.offsetWidth / 100;
+    document.body.removeChild(probe);
+    return mm * px;
+  }
+
+  /** Scale mirrored bracket to fit one A4 landscape page (via CSS zoom). */
   function fitPrintScale() {
-    // Soft hint for print CSS variable based on size
-    var scale = state.size === 32 ? 0.55 : state.size === 16 ? 0.7 : 0.85;
-    el.bracket.style.setProperty("--print-scale", String(scale));
+    var wrap = el.printWrap || el.bracket;
+    wrap.style.setProperty("--print-scale", "1");
+
+    // Apply print-like compact class while measuring so size matches @media print
+    document.documentElement.classList.add("print-measure");
+    updateSizeClass();
+
+    var availW = mmToPx(278);
+    var availH = mmToPx(178);
+
+    var bw = el.bracket.scrollWidth;
+    var bh = el.bracket.scrollHeight;
+
+    document.documentElement.classList.remove("print-measure");
+
+    if (!bw || !bh) {
+      var fallback = state.size === 32 ? 0.5 : state.size === 16 ? 0.72 : 0.92;
+      wrap.style.setProperty("--print-scale", String(fallback));
+      return fallback;
+    }
+    var scale = Math.min(availW / bw, availH / bh);
+    if (state.size === 8) scale = Math.min(Math.max(scale, 0.85), 1.15);
+    else if (state.size === 16) scale = Math.min(scale, 1);
+    else scale = Math.min(scale, 1);
+    scale = Math.max(0.28, scale * 0.96);
+    wrap.style.setProperty("--print-scale", String(scale.toFixed(4)));
+    return scale;
+  }
+
+  function preparePrint() {
+    updateSizeClass();
+    // Ensure bracket exists
+    if (!el.bracket.children.length) {
+      renderBracket();
+    }
+    fitPrintScale();
   }
 
   function renderBracket() {
@@ -479,6 +527,7 @@
     el.bracket.appendChild(renderSide("L"));
     el.bracket.appendChild(renderCenter());
     el.bracket.appendChild(renderSide("R"));
+    updateSizeClass();
     fitPrintScale();
     el.status.textContent = "已產生 · " + state.size + "強（左右對開）";
     el.status.classList.add("ready");
@@ -516,6 +565,7 @@
       state.players[i] = old[i] || emptyPlayer();
     }
     state.winners = {};
+    updateSizeClass();
     renderEntries();
     el.bracket.innerHTML = "";
     el.status.textContent = "尚未產生";
@@ -579,15 +629,29 @@
     document.getElementById("btnGenerate").addEventListener("click", generate);
     document.getElementById("btnReset").addEventListener("click", resetAll);
     document.getElementById("btnPrint").addEventListener("click", function () {
-      window.print();
+      preparePrint();
+      setTimeout(function () { window.print(); }, 50);
     });
     el.sizeSelect.addEventListener("change", onSizeChange);
+
+    el.printWrap = document.getElementById("printScaleWrap") || el.bracket;
+    window.addEventListener("beforeprint", preparePrint);
+    // Some browsers fire matchMedia instead of/in addition to beforeprint
+    if (window.matchMedia) {
+      var mq = window.matchMedia("print");
+      var onMq = function (e) {
+        if (e.matches) preparePrint();
+      };
+      if (mq.addEventListener) mq.addEventListener("change", onMq);
+      else if (mq.addListener) mq.addListener(onMq);
+    }
   }
 
   function init() {
     bind();
     var restored = restore();
     el.sizeSelect.value = String(state.size);
+    updateSizeClass();
     if (!restored) {
       state.players = initPlayers(state.size);
       state.winners = {};
