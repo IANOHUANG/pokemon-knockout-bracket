@@ -329,67 +329,6 @@
     return elbow;
   }
 
-  function currentZoom() {
-    var wrap = document.getElementById("printScaleWrap");
-    if (!wrap) return 1;
-    var z = parseFloat(getComputedStyle(wrap).zoom);
-    if (!z || !isFinite(z) || z <= 0) {
-      z = parseFloat(wrap.dataset.printScale || wrap.style.getPropertyValue("--print-scale")) || 1;
-    }
-    return z > 0 ? z : 1;
-  }
-
-  function layoutElbows() {
-    var zoom = currentZoom();
-    var groups = document.querySelectorAll(".match-pair-group");
-    for (var i = 0; i < groups.length; i++) {
-      var group = groups[i];
-      var body = group.querySelector(".mpg-body");
-      var elbow = group.querySelector(".mpg-elbow");
-      if (!body || !elbow) continue;
-
-      elbow.style.height = "";
-
-      var cards = body.querySelectorAll(".match-pair");
-      var eRect = elbow.getBoundingClientRect();
-      // getBoundingClientRect is post-zoom; CSS px is pre-zoom
-      var toCss = function (v) { return v / zoom; };
-
-      if (elbow.classList.contains("is-fork") && cards.length >= 2) {
-        var c0 = cards[0].getBoundingClientRect();
-        var c1 = cards[cards.length - 1].getBoundingClientRect();
-        var y0 = toCss(c0.top + c0.height / 2 - eRect.top);
-        var y1 = toCss(c1.top + c1.height / 2 - eRect.top);
-        if (y1 < y0) {
-          var tmp = y0;
-          y0 = y1;
-          y1 = tmp;
-        }
-        var mid = (y0 + y1) / 2;
-        elbow.style.setProperty("--y0", y0 + "px");
-        elbow.style.setProperty("--y1", y1 + "px");
-        elbow.style.setProperty("--ymid", mid + "px");
-        elbow.style.setProperty("--join-h", y1 - y0 + "px");
-      } else {
-        var midY = toCss(eRect.height) / 2;
-        if (cards[0]) {
-          var cr = cards[0].getBoundingClientRect();
-          midY = toCss(cr.top + cr.height / 2 - eRect.top);
-        }
-        elbow.style.setProperty("--ymid", midY + "px");
-      }
-    }
-
-    var finalWrap = document.querySelector(".final-match-wrap .match-pair");
-    var finalRow = document.querySelector(".final-row");
-    if (finalWrap && finalRow) {
-      var fr = finalRow.getBoundingClientRect();
-      var mr = finalWrap.getBoundingClientRect();
-      var py = (mr.top + mr.height / 2 - fr.top) / zoom;
-      finalRow.style.setProperty("--rail-y", py + "px");
-    }
-  }
-
   function renderMatch(players, winner, onPick, onClear) {
     var matchEl = document.createElement("div");
     matchEl.className = "match";
@@ -621,7 +560,6 @@
   }
 
   function fitPrintScale() {
-    layoutElbows();
     var wrap = el.printWrap || el.bracket;
     resetPrintLayout();
     document.body.classList.add("is-printing");
@@ -673,7 +611,6 @@
     document.documentElement.classList.remove("print-measure");
     wrap.style.setProperty("--print-scale", String(scale.toFixed(4)));
     wrap.dataset.printScale = String(scale.toFixed(4));
-    layoutElbows();
     return scale;
   }
 
@@ -694,10 +631,6 @@
     updateSizeClass();
     el.status.textContent = "已產生 · " + state.size + "強（左右對開）";
     el.status.classList.add("ready");
-    requestAnimationFrame(function () {
-      layoutElbows();
-      requestAnimationFrame(layoutElbows);
-    });
   }
 
   function generate() {
