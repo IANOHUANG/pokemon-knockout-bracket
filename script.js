@@ -482,33 +482,55 @@
     return mm * px;
   }
 
-  /** Scale mirrored bracket to fit one A4 landscape page (via CSS zoom). */
+  /** Fill printable area on both axes with CSS zoom (single A4 landscape page). */
   function fitPrintScale() {
     var wrap = el.printWrap || el.bracket;
     wrap.style.setProperty("--print-scale", "1");
+    wrap.style.width = "";
+    wrap.style.height = "";
+    wrap.style.overflow = "";
+    el.bracket.style.minHeight = "";
+    el.bracket.style.height = "";
+    document.documentElement.style.removeProperty("--print-target-h");
 
-    // Apply print-like compact class while measuring so size matches @media print
     document.documentElement.classList.add("print-measure");
     updateSizeClass();
 
-    var availW = mmToPx(278);
-    var availH = mmToPx(178);
+    var availW = mmToPx(279);
+    var headerEl = document.querySelector(".app-header");
+    var headerH = headerEl ? headerEl.getBoundingClientRect().height : mmToPx(11);
+    var availH = Math.max(mmToPx(192) - headerH, mmToPx(160));
 
+    void el.bracket.offsetHeight;
     var bw = el.bracket.scrollWidth;
-    var bh = el.bracket.scrollHeight;
+    var bh = Math.max(el.bracket.scrollHeight, 1);
+    if (!bw) {
+      document.documentElement.classList.remove("print-measure");
+      wrap.style.setProperty("--print-scale", "0.9");
+      return 0.9;
+    }
+
+    // Match page aspect: stretch height so bw/bh ≈ availW/availH when content is too short
+    var targetH = (bw * availH) / availW;
+    if (targetH > bh) {
+      el.bracket.style.minHeight = targetH + "px";
+      el.bracket.style.height = targetH + "px";
+      document.documentElement.style.setProperty("--print-target-h", targetH + "px");
+      void el.bracket.offsetHeight;
+      bw = el.bracket.scrollWidth;
+      bh = Math.max(el.bracket.scrollHeight, 1);
+    }
+
+    var scale = Math.min(availW / bw, availH / bh) * 0.96;
+    scale = Math.max(0.3, Math.min(scale, 1.5));
+
+    // Final stretch so zoomed size fills avail box
+    var layoutH = availH / scale;
+    el.bracket.style.minHeight = layoutH + "px";
+    el.bracket.style.height = layoutH + "px";
+    document.documentElement.style.setProperty("--print-target-h", layoutH + "px");
 
     document.documentElement.classList.remove("print-measure");
-
-    if (!bw || !bh) {
-      var fallback = state.size === 32 ? 0.5 : state.size === 16 ? 0.72 : 0.92;
-      wrap.style.setProperty("--print-scale", String(fallback));
-      return fallback;
-    }
-    var scale = Math.min(availW / bw, availH / bh);
-    if (state.size === 8) scale = Math.min(Math.max(scale, 0.85), 1.15);
-    else if (state.size === 16) scale = Math.min(scale, 1);
-    else scale = Math.min(scale, 1);
-    scale = Math.max(0.28, scale * 0.96);
     wrap.style.setProperty("--print-scale", String(scale.toFixed(4)));
     return scale;
   }
