@@ -437,14 +437,21 @@
     var center = document.createElement("div");
     center.className = "bracket-center";
 
-    // Final
-    var finalBlock = document.createElement("div");
-    finalBlock.className = "final-block";
+    /* Title row matches .round-title height so body midline = SF match midline. */
     var flabel = document.createElement("div");
-    flabel.className = "center-label";
+    flabel.className = "center-label round-title";
     flabel.textContent = "決賽";
-    finalBlock.appendChild(flabel);
+    center.appendChild(flabel);
 
+    var body = document.createElement("div");
+    body.className = "center-body";
+
+    /* Upper half of match-stack region (empty — keeps final on midline). */
+    var upper = document.createElement("div");
+    upper.className = "center-upper";
+    body.appendChild(upper);
+
+    /* Final row sits on the vertical midline of the match-stack region. */
     var finalists = [leftFinalist(), rightFinalist()];
     var finalWinner = state.winners["final"] || null;
     var finalRow = document.createElement("div");
@@ -481,19 +488,18 @@
     railR.setAttribute("aria-hidden", "true");
     railR.innerHTML = '<div class="rail-line"></div>';
     finalRow.appendChild(railR);
+    body.appendChild(finalRow);
 
-    finalBlock.appendChild(finalRow);
+    /* Lower half: stem + champion hang below the final match. */
+    var lower = document.createElement("div");
+    lower.className = "center-lower";
 
-    // Stem down to champion
     var stem = document.createElement("div");
     stem.className = "final-to-champ";
     stem.setAttribute("aria-hidden", "true");
     stem.innerHTML = '<div class="rail-line vertical"></div>';
-    finalBlock.appendChild(stem);
+    lower.appendChild(stem);
 
-    center.appendChild(finalBlock);
-
-    // Champion
     var champBlock = document.createElement("div");
     champBlock.className = "champion-block";
     var card = document.createElement("div");
@@ -524,7 +530,9 @@
       card.appendChild(empty);
     }
     champBlock.appendChild(card);
-    center.appendChild(champBlock);
+    lower.appendChild(champBlock);
+    body.appendChild(lower);
+    center.appendChild(body);
 
     return center;
   }
