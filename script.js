@@ -1,16 +1,18 @@
 (function () {
   "use strict";
 
-  var STORAGE_KEY = "pokemon-knockout-bracket-v1";
+  var STORAGE_KEY = "iano-ptcg-bracket-v2";
 
-  /** Standard single-elim seeding pairs for first round (1-indexed seeds). */
-  var SEED_ORDERS = {
-    8: [1, 8, 4, 5, 2, 7, 3, 6],
-    16: [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11],
-    32: [
-      1, 32, 16, 17, 8, 25, 9, 24, 4, 29, 13, 20, 5, 28, 12, 21, 2, 31, 15, 18, 7,
-      26, 10, 23, 3, 30, 14, 19, 6, 27, 11, 22,
-    ],
+  /** First-round seed order top→bottom for each half (standard bracket, #1 left / #2 right). */
+  var LEFT_SEEDS = {
+    8: [1, 8, 4, 5],
+    16: [1, 16, 8, 9, 4, 13, 5, 12],
+    32: [1, 32, 16, 17, 8, 25, 9, 24, 4, 29, 13, 20, 5, 28, 12, 21],
+  };
+  var RIGHT_SEEDS = {
+    8: [2, 7, 3, 6],
+    16: [2, 15, 7, 10, 3, 14, 6, 11],
+    32: [2, 31, 15, 18, 7, 26, 10, 23, 3, 30, 14, 19, 6, 27, 11, 22],
   };
 
   var ROUND_LABELS = {
@@ -19,41 +21,42 @@
     8: "8強",
     4: "準決賽",
     2: "決賽",
-    1: "冠軍",
   };
 
   var state = {
     size: 16,
-    players: [], // first-round slots: { id, seed, deck }
-    winners: {}, // key: "r{round}-m{match}" -> player object or null
+    players: [], // index = seed-1; { name, playerId, deck }
+    winners: {}, // keys: "L-r{n}-m{i}", "R-r{n}-m{i}", "final", "champion"
   };
 
-  var el = {
-    sizeSelect: null,
-    entryGrid: null,
-    bracket: null,
-    status: null,
-  };
+  var el = {};
 
   function emptyPlayer() {
-    return { id: "", seed: "", deck: "" };
+    return { name: "", playerId: "", deck: "" };
   }
 
   function clonePlayer(p) {
     if (!p) return null;
-    return { id: p.id || "", seed: p.seed || "", deck: p.deck || "" };
+    return {
+      name: p.name || "",
+      playerId: p.playerId || "",
+      deck: p.deck || "",
+      seed: p.seed || null,
+    };
   }
 
   function playerFilled(p) {
-    return !!(p && String(p.id || "").trim());
+    return !!(p && String(p.name || "").trim());
   }
 
   function playerKey(p) {
-    if (!playerFilled(p)) return "";
+    if (!p) return "";
     return (
-      String(p.id).trim() +
+      String(p.seed || "") +
       "|" +
-      String(p.seed || "").trim() +
+      String(p.name || "").trim() +
+      "|" +
+      String(p.playerId || "").trim() +
       "|" +
       String(p.deck || "").trim()
     );
@@ -65,18 +68,6 @@
     return playerKey(a) === playerKey(b);
   }
 
-  function numRounds(size) {
-    return Math.log2(size);
-  }
-
-  function matchCount(roundSize) {
-    return roundSize / 2;
-  }
-
-  function winnerKey(roundSize, matchIndex) {
-    return "r" + roundSize + "-m" + matchIndex;
-  }
-
   function initPlayers(size) {
     var arr = [];
     for (var i = 0; i < size; i++) {
@@ -85,185 +76,192 @@
     return arr;
   }
 
-  function roundSizes(size) {
-    var rounds = [];
-    for (var s = size; s >= 2; s = s / 2) {
-      rounds.push(s);
+  function getBySeed(seed) {
+    var p = state.players[seed - 1];
+    if (!p) return null;
+    var out = clonePlayer(p);
+    if (out) out.seed = seed;
+    return out;
+  }
+
+  function sideSeeds(side) {
+    return side === "L" ? LEFT_SEEDS[state.size] : RIGHT_SEEDS[state.size];
+  }
+
+  function halfSize() {
+    return state.size / 2;
+  }
+
+  /** Round sizes on one side from first round down to 2 (side final = 2 players). */
+  function sideRoundSizes() {
+    var sizes = [];
+    for (var s = halfSize(); s >= 2; s = s / 2) {
+      sizes.push(s);
     }
-    return rounds;
+    return sizes;
   }
 
-  function getSlotPlayer(roundSize, slotIndex) {
-    // slotIndex is 0-based within the round (0 .. roundSize-1)
-    if (roundSize === state.size) {
-      return state.players[slotIndex] || emptyPlayer();
+  function wKey(side, roundSize, matchIndex) {
+    return side + "-r" + roundSize + "-m" + matchIndex;
+  }
+
+  function getSideSlot(side, roundSize, slotIndex) {
+    if (roundSize === halfSize()) {
+      var seeds = sideSeeds(side);
+      return getBySeed(seeds[slotIndex]);
     }
-    // Came from previous round winner of match floor(slotIndex)
-    // Actually: for a round of size R, slot i comes from winner of match i in previous round of size R*2
-    // Wait: previous round had R*2 players, R matches. Match m produces the player for slot m in current round.
-    var prevSize = roundSize * 2;
-    var matchIdx = slotIndex;
-    return state.winners[winnerKey(prevSize, matchIdx)] || null;
+    var prev = roundSize * 2;
+    var fromMatch = slotIndex;
+    return state.winners[wKey(side, prev, fromMatch)] || null;
   }
 
-  function getMatchPlayers(roundSize, matchIndex) {
-    var top = getSlotPlayer(roundSize, matchIndex * 2);
-    var bottom = getSlotPlayer(roundSize, matchIndex * 2 + 1);
-    return [top, bottom];
+  function getSideMatchPlayers(side, roundSize, matchIndex) {
+    return [
+      getSideSlot(side, roundSize, matchIndex * 2),
+      getSideSlot(side, roundSize, matchIndex * 2 + 1),
+    ];
   }
 
-  /** Clear winner of this match and all downstream dependents. */
-  function clearWinnerAndDownstream(roundSize, matchIndex) {
-    var key = winnerKey(roundSize, matchIndex);
-    delete state.winners[key];
-
-    // This match's winner feeds into next round slot = matchIndex
-    // Next round size = roundSize / 2
-    // Next match index = floor(matchIndex / 2)
+  function clearSideDownstream(side, roundSize, matchIndex) {
+    delete state.winners[wKey(side, roundSize, matchIndex)];
     if (roundSize > 2) {
-      var nextRound = roundSize / 2;
-      var nextMatch = Math.floor(matchIndex / 2);
-      clearWinnerAndDownstream(nextRound, nextMatch);
-    } else if (roundSize === 2) {
-      // Final feeds champion
+      clearSideDownstream(side, roundSize / 2, Math.floor(matchIndex / 2));
+    } else {
+      // side final feeds overall final
+      delete state.winners["final"];
       delete state.winners["champion"];
     }
   }
 
-  function setWinner(roundSize, matchIndex, player) {
-    var key = winnerKey(roundSize, matchIndex);
+  function setSideWinner(side, roundSize, matchIndex, player) {
+    var key = wKey(side, roundSize, matchIndex);
     var existing = state.winners[key];
-
     if (playersEqual(existing, player)) {
-      // Same pick — treat as toggle clear
-      clearWinnerAndDownstream(roundSize, matchIndex);
+      clearSideDownstream(side, roundSize, matchIndex);
       return;
     }
-
-    // Changing winner: clear downstream first, then set
-    clearWinnerAndDownstream(roundSize, matchIndex);
+    clearSideDownstream(side, roundSize, matchIndex);
     state.winners[key] = clonePlayer(player);
-
-    if (roundSize === 2) {
-      state.winners["champion"] = clonePlayer(player);
-    }
   }
 
-  function clearMatch(roundSize, matchIndex) {
-    clearWinnerAndDownstream(roundSize, matchIndex);
+  function clearFinalDownstream() {
+    delete state.winners["final"];
+    delete state.winners["champion"];
   }
 
-  function autoSeed() {
-    var order = SEED_ORDERS[state.size];
-    if (!order) return;
-    for (var i = 0; i < state.size; i++) {
-      if (!state.players[i]) state.players[i] = emptyPlayer();
-      state.players[i].seed = String(order[i]);
+  function setFinalWinner(player) {
+    var existing = state.winners["final"];
+    if (playersEqual(existing, player)) {
+      clearFinalDownstream();
+      return;
     }
-    // Changing seeds / first round invalidates all winners
-    state.winners = {};
-    renderEntries();
-    persist();
-    if (document.getElementById("bracket").children.length) {
-      renderBracket();
-    }
+    clearFinalDownstream();
+    state.winners["final"] = clonePlayer(player);
+    state.winners["champion"] = clonePlayer(player);
   }
+
+  function leftFinalist() {
+    return state.winners[wKey("L", 2, 0)] || null;
+  }
+
+  function rightFinalist() {
+    return state.winners[wKey("R", 2, 0)] || null;
+  }
+
+  /* ---------- Entry panel ---------- */
 
   function readEntriesFromDom() {
     var cards = el.entryGrid.querySelectorAll(".entry-card");
     for (var i = 0; i < cards.length; i++) {
       var card = cards[i];
-      var idx = parseInt(card.getAttribute("data-index"), 10);
+      var idx = parseInt(card.getAttribute("data-seed"), 10) - 1;
       state.players[idx] = {
-        id: (card.querySelector('[data-field="id"]') || {}).value || "",
-        seed: (card.querySelector('[data-field="seed"]') || {}).value || "",
+        name: (card.querySelector('[data-field="name"]') || {}).value || "",
+        playerId: (card.querySelector('[data-field="playerId"]') || {}).value || "",
         deck: (card.querySelector('[data-field="deck"]') || {}).value || "",
       };
     }
   }
 
   function onEntryChange() {
-    var prev = state.players.map(playerKey);
+    var prev = state.players.map(function (p, i) {
+      var c = clonePlayer(p);
+      if (c) c.seed = i + 1;
+      return playerKey(c);
+    });
     readEntriesFromDom();
     var changed = false;
     for (var i = 0; i < state.size; i++) {
-      if (prev[i] !== playerKey(state.players[i])) {
+      var c = clonePlayer(state.players[i]);
+      if (c) c.seed = i + 1;
+      if (prev[i] !== playerKey(c)) {
         changed = true;
         break;
       }
     }
     if (changed) {
-      // First-round change: clear all advancement
       state.winners = {};
       persist();
-      if (el.bracket.children.length) {
-        renderBracket();
-      }
+      if (el.bracket.children.length) renderBracket();
     } else {
       persist();
     }
   }
 
+  function field(labelText, fieldName, value, placeholder) {
+    var lab = document.createElement("label");
+    lab.textContent = labelText;
+    var input = document.createElement("input");
+    input.type = "text";
+    input.setAttribute("data-field", fieldName);
+    input.value = value || "";
+    input.placeholder = placeholder || "";
+    input.autocomplete = "off";
+    lab.appendChild(input);
+    return lab;
+  }
+
   function renderEntries() {
     el.entryGrid.innerHTML = "";
-    for (var i = 0; i < state.size; i++) {
-      var p = state.players[i] || emptyPlayer();
+    for (var seed = 1; seed <= state.size; seed++) {
+      var p = state.players[seed - 1] || emptyPlayer();
       var card = document.createElement("div");
       card.className = "entry-card";
-      card.setAttribute("data-index", String(i));
+      card.setAttribute("data-seed", String(seed));
 
-      var badge = document.createElement("span");
-      badge.className = "seed-badge";
-      badge.textContent = "位置 " + (i + 1);
+      var badge = document.createElement("div");
+      badge.className = "entry-seed";
+      badge.textContent = "#" + seed;
+      badge.title = "種子 " + seed;
       card.appendChild(badge);
 
-      var title = document.createElement("div");
-      title.className = "slot-title";
-      title.textContent = "對戰位置 " + (i + 1);
-      card.appendChild(title);
-
-      card.appendChild(fieldLabelInput("選手ID", "id", p.id, "例如：AshKetchum"));
-      card.appendChild(fieldLabelInput("編號（種子）", "seed", p.seed, "1"));
-      card.appendChild(fieldLabelInput("使用牌組", "deck", p.deck, "例如：皮卡丘主題"));
+      var fields = document.createElement("div");
+      fields.className = "entry-fields";
+      fields.appendChild(field("選手名稱", "name", p.name, "顯示名稱"));
+      fields.appendChild(field("玩家ID", "playerId", p.playerId, "玩家／帳號 ID"));
+      fields.appendChild(field("使用牌組", "deck", p.deck, "牌組名稱"));
+      card.appendChild(fields);
 
       el.entryGrid.appendChild(card);
     }
-
     el.entryGrid.querySelectorAll("input").forEach(function (input) {
       input.addEventListener("input", onEntryChange);
       input.addEventListener("change", onEntryChange);
     });
   }
 
-  function fieldLabelInput(labelText, field, value, placeholder) {
-    var wrap = document.createElement("div");
-    var label = document.createElement("label");
-    label.textContent = labelText;
-    var input = document.createElement("input");
-    input.type = "text";
-    input.setAttribute("data-field", field);
-    input.value = value || "";
-    input.placeholder = placeholder || "";
-    input.autocomplete = "off";
-    wrap.appendChild(label);
-    wrap.appendChild(input);
-    return wrap;
-  }
+  /* ---------- Bracket render ---------- */
 
-  function renderPlayerRow(player, roundSize, matchIndex, slotInMatch) {
+  function renderPlayerRow(player, onAdvance, isWinner) {
     var row = document.createElement("div");
     row.className = "player-row";
-
-    var winner = state.winners[winnerKey(roundSize, matchIndex)];
-    var isWinner = playerFilled(player) && playersEqual(winner, player);
     if (isWinner) row.classList.add("is-winner");
 
     if (!playerFilled(player)) {
       row.classList.add("is-empty");
       var ph = document.createElement("span");
       ph.className = "placeholder-text";
-      ph.style.flex = "1";
-      ph.textContent = roundSize === state.size ? "（尚未填寫）" : "勝者晉級";
+      ph.textContent = "勝者晉級";
       row.appendChild(ph);
       return row;
     }
@@ -275,140 +273,187 @@
 
     var info = document.createElement("div");
     info.className = "player-info";
-    var idEl = document.createElement("div");
-    idEl.className = "player-id";
-    idEl.textContent = player.id;
-    idEl.title = player.id;
-    info.appendChild(idEl);
-    if (player.deck) {
-      var deckEl = document.createElement("div");
-      deckEl.className = "player-deck";
-      deckEl.textContent = player.deck;
-      deckEl.title = player.deck;
-      info.appendChild(deckEl);
+    var nameEl = document.createElement("div");
+    nameEl.className = "player-name";
+    nameEl.textContent = player.name;
+    nameEl.title = player.name;
+    info.appendChild(nameEl);
+    var metaParts = [];
+    if (player.playerId) metaParts.push(player.playerId);
+    if (player.deck) metaParts.push(player.deck);
+    if (metaParts.length) {
+      var meta = document.createElement("div");
+      meta.className = "player-meta";
+      meta.textContent = metaParts.join(" · ");
+      meta.title = metaParts.join(" · ");
+      info.appendChild(meta);
     }
     row.appendChild(info);
 
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn-sm btn-advance no-print";
-    btn.textContent = isWinner ? "已晉級" : "晉級";
-    btn.title = isWinner
-      ? "再次點擊可取消晉級並清除後續結果"
-      : "將此選手晉級到下一輪";
-    btn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      setWinner(roundSize, matchIndex, player);
-      persist();
-      renderBracket();
-    });
-    row.appendChild(btn);
-
+    if (onAdvance) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-sm btn-advance no-print";
+      btn.textContent = isWinner ? "已晉級" : "晉級";
+      btn.title = isWinner
+        ? "再次點擊可取消晉級並清除後續結果"
+        : "將此選手晉級到下一輪";
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        onAdvance(player);
+      });
+      row.appendChild(btn);
+    }
     return row;
   }
 
-  function renderBracket() {
-    el.bracket.innerHTML = "";
-    var rounds = roundSizes(state.size);
+  function renderMatch(players, winner, onPick, onClear) {
+    var matchEl = document.createElement("div");
+    matchEl.className = "match";
 
-    for (var r = 0; r < rounds.length; r++) {
-      var rs = rounds[r];
+    var pair = document.createElement("div");
+    pair.className = "match-pair";
+    pair.appendChild(
+      renderPlayerRow(players[0], onPick, playersEqual(winner, players[0]))
+    );
+    pair.appendChild(
+      renderPlayerRow(players[1], onPick, playersEqual(winner, players[1]))
+    );
+    matchEl.appendChild(pair);
+
+    var clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.className = "btn btn-sm btn-clear-match no-print";
+    clearBtn.textContent = "清除";
+    clearBtn.title = "清除此場晉級結果與後續依賴";
+    clearBtn.addEventListener("click", onClear);
+    matchEl.appendChild(clearBtn);
+
+    return matchEl;
+  }
+
+  function renderSide(side) {
+    var sideEl = document.createElement("div");
+    sideEl.className = "bracket-side " + (side === "L" ? "left" : "right");
+
+    var rounds = sideRoundSizes();
+    // Left: first round on far left → side final near center
+    // Right: first round on far right → side final near center → reverse order in DOM
+    var order = side === "L" ? rounds.slice() : rounds.slice().reverse();
+
+    for (var ri = 0; ri < order.length; ri++) {
+      var rs = order[ri];
       var roundEl = document.createElement("div");
       roundEl.className = "round";
+      if (rs === 2) roundEl.classList.add("is-side-final");
 
       var title = document.createElement("div");
       title.className = "round-title";
       title.textContent = ROUND_LABELS[rs] || rs + "強";
       roundEl.appendChild(title);
 
-      var matches = matchCount(rs);
-      // Group matches in pairs for connector visuals (except final)
-      var groupEl = null;
+      var matches = rs / 2;
+      var stack = document.createElement("div");
+      stack.className = "match-stack";
 
+      // Group consecutive matches in pairs for vertical connectors (when >1 match)
+      var group = null;
       for (var m = 0; m < matches; m++) {
-        if (rs > 2) {
+        if (matches > 1) {
           if (m % 2 === 0) {
-            groupEl = document.createElement("div");
-            groupEl.className = "match-group";
-            if (m + 1 < matches) groupEl.classList.add("has-connector");
-            roundEl.appendChild(groupEl);
+            group = document.createElement("div");
+            group.className = "match-pair-group";
+            stack.appendChild(group);
           }
         } else {
-          groupEl = document.createElement("div");
-          groupEl.className = "match-group";
-          roundEl.appendChild(groupEl);
+          group = document.createElement("div");
+          group.className = "match-pair-group";
+          stack.appendChild(group);
         }
 
-        var matchEl = document.createElement("div");
-        matchEl.className = "match";
-
-        var pair = document.createElement("div");
-        pair.className = "match-pair";
-
-        var players = getMatchPlayers(rs, m);
-        pair.appendChild(renderPlayerRow(players[0], rs, m, 0));
-        pair.appendChild(renderPlayerRow(players[1], rs, m, 1));
-
-        matchEl.appendChild(pair);
-
-        var clearBtn = document.createElement("button");
-        clearBtn.type = "button";
-        clearBtn.className = "btn btn-sm btn-clear-match no-print";
-        clearBtn.textContent = "清除";
-        clearBtn.title = "清除此場晉級結果與後續依賴";
         (function (roundSize, matchIndex) {
-          clearBtn.addEventListener("click", function () {
-            clearMatch(roundSize, matchIndex);
-            persist();
-            renderBracket();
-          });
+          var players = getSideMatchPlayers(side, roundSize, matchIndex);
+          var winner = state.winners[wKey(side, roundSize, matchIndex)] || null;
+          var matchEl = renderMatch(
+            players,
+            winner,
+            function (player) {
+              setSideWinner(side, roundSize, matchIndex, player);
+              persist();
+              renderBracket();
+            },
+            function () {
+              clearSideDownstream(side, roundSize, matchIndex);
+              persist();
+              renderBracket();
+            }
+          );
+          group.appendChild(matchEl);
         })(rs, m);
-        matchEl.appendChild(clearBtn);
-
-        groupEl.appendChild(matchEl);
       }
 
-      el.bracket.appendChild(roundEl);
+      roundEl.appendChild(stack);
+      sideEl.appendChild(roundEl);
     }
 
-    // Champion column
-    var champRound = document.createElement("div");
-    champRound.className = "round champion-round";
-    var champTitle = document.createElement("div");
-    champTitle.className = "round-title";
-    champTitle.textContent = "冠軍";
-    champRound.appendChild(champTitle);
+    return sideEl;
+  }
 
-    var champGroup = document.createElement("div");
-    champGroup.className = "match-group";
-    var champMatch = document.createElement("div");
-    champMatch.className = "match";
+  function renderCenter() {
+    var center = document.createElement("div");
+    center.className = "bracket-center";
 
-    var champ = state.winners["champion"];
-    // Also derive from final if set
-    if (!champ && state.winners[winnerKey(2, 0)]) {
-      champ = state.winners[winnerKey(2, 0)];
-      state.winners["champion"] = clonePlayer(champ);
-    }
+    // Final
+    var finalBlock = document.createElement("div");
+    finalBlock.className = "final-block";
+    var flabel = document.createElement("div");
+    flabel.className = "center-label";
+    flabel.textContent = "決賽";
+    finalBlock.appendChild(flabel);
 
+    var finalists = [leftFinalist(), rightFinalist()];
+    var finalWinner = state.winners["final"] || null;
+    finalBlock.appendChild(
+      renderMatch(
+        finalists,
+        finalWinner,
+        function (player) {
+          setFinalWinner(player);
+          persist();
+          renderBracket();
+        },
+        function () {
+          clearFinalDownstream();
+          persist();
+          renderBracket();
+        }
+      )
+    );
+    center.appendChild(finalBlock);
+
+    // Champion
+    var champBlock = document.createElement("div");
+    champBlock.className = "champion-block";
     var card = document.createElement("div");
     card.className = "champion-card";
     var label = document.createElement("div");
     label.className = "champion-label";
-    label.textContent = "CHAMPION";
+    label.textContent = "冠軍 CHAMPION";
     card.appendChild(label);
 
+    var champ = state.winners["champion"] || state.winners["final"] || null;
     if (playerFilled(champ)) {
       var name = document.createElement("div");
       name.className = "champion-name";
-      name.textContent = champ.id;
+      name.textContent = champ.name;
       card.appendChild(name);
       var meta = document.createElement("div");
       meta.className = "champion-meta";
       var parts = [];
       if (champ.seed) parts.push("#" + champ.seed);
+      if (champ.playerId) parts.push(champ.playerId);
       if (champ.deck) parts.push(champ.deck);
-      meta.textContent = parts.join(" · ") || "勝者晉級";
+      meta.textContent = parts.join(" · ") || "";
       card.appendChild(meta);
     } else {
       var empty = document.createElement("div");
@@ -416,20 +461,30 @@
       empty.textContent = "勝者晉級";
       card.appendChild(empty);
     }
+    champBlock.appendChild(card);
+    center.appendChild(champBlock);
 
-    champMatch.appendChild(card);
-    champGroup.appendChild(champMatch);
-    champRound.appendChild(champGroup);
-    el.bracket.appendChild(champRound);
+    return center;
+  }
 
-    el.status.textContent = "已產生 · " + state.size + "強";
+  function fitPrintScale() {
+    // Soft hint for print CSS variable based on size
+    var scale = state.size === 32 ? 0.55 : state.size === 16 ? 0.7 : 0.85;
+    el.bracket.style.setProperty("--print-scale", String(scale));
+  }
+
+  function renderBracket() {
+    el.bracket.innerHTML = "";
+    el.bracket.appendChild(renderSide("L"));
+    el.bracket.appendChild(renderCenter());
+    el.bracket.appendChild(renderSide("R"));
+    fitPrintScale();
+    el.status.textContent = "已產生 · " + state.size + "強（左右對開）";
     el.status.classList.add("ready");
   }
 
   function generate() {
     readEntriesFromDom();
-    // Keep winners that still make sense? Safer: keep winners only if first-round players unchanged keys
-    // On generate we keep existing winners (user may re-generate after edits which already cleared)
     renderBracket();
     persist();
     document.getElementById("bracketSection").scrollIntoView({
@@ -439,13 +494,7 @@
   }
 
   function resetAll() {
-    if (
-      !window.confirm(
-        "確定要重置嗎？將清除所有選手資料與晉級結果。"
-      )
-    ) {
-      return;
-    }
+    if (!window.confirm("確定要重置嗎？將清除所有選手資料與晉級結果。")) return;
     state.players = initPlayers(state.size);
     state.winners = {};
     renderEntries();
@@ -459,11 +508,11 @@
     readEntriesFromDom();
     var newSize = parseInt(el.sizeSelect.value, 10);
     if (newSize === state.size) return;
-    var oldPlayers = state.players.slice();
+    var old = state.players.slice();
     state.size = newSize;
     state.players = initPlayers(newSize);
-    for (var i = 0; i < Math.min(oldPlayers.length, newSize); i++) {
-      state.players[i] = oldPlayers[i] || emptyPlayer();
+    for (var i = 0; i < Math.min(old.length, newSize); i++) {
+      state.players[i] = old[i] || emptyPlayer();
     }
     state.winners = {};
     renderEntries();
@@ -475,15 +524,15 @@
 
   function persist() {
     try {
-      var data = {
-        size: state.size,
-        players: state.players,
-        winners: state.winners,
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {
-      // ignore quota / private mode
-    }
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          size: state.size,
+          players: state.players,
+          winners: state.winners,
+        })
+      );
+    } catch (e) {}
   }
 
   function restore() {
@@ -492,13 +541,28 @@
       if (!raw) return false;
       var data = JSON.parse(raw);
       if (!data || !data.size) return false;
-      state.size = data.size === 8 || data.size === 16 || data.size === 32 ? data.size : 16;
+      if (data.size !== 8 && data.size !== 16 && data.size !== 32) return false;
+      // Ignore legacy shapes without name field
+      if (Array.isArray(data.players) && data.players.length) {
+        var sample = data.players[0];
+        if (sample && sample.id !== undefined && sample.name === undefined) {
+          return false;
+        }
+      }
+      state.size = data.size;
       state.players = Array.isArray(data.players)
         ? data.players
         : initPlayers(state.size);
       while (state.players.length < state.size) state.players.push(emptyPlayer());
-      state.players = state.players.slice(0, state.size);
-      state.winners = data.winners && typeof data.winners === "object" ? data.winners : {};
+      state.players = state.players.slice(0, state.size).map(function (p) {
+        return {
+          name: (p && p.name) || "",
+          playerId: (p && p.playerId) || "",
+          deck: (p && p.deck) || "",
+        };
+      });
+      state.winners =
+        data.winners && typeof data.winners === "object" ? data.winners : {};
       return true;
     } catch (e) {
       return false;
@@ -511,10 +575,6 @@
     el.bracket = document.getElementById("bracket");
     el.status = document.getElementById("bracketStatus");
 
-    document.getElementById("btnAutoSeed").addEventListener("click", function () {
-      readEntriesFromDom();
-      autoSeed();
-    });
     document.getElementById("btnGenerate").addEventListener("click", generate);
     document.getElementById("btnReset").addEventListener("click", resetAll);
     document.getElementById("btnPrint").addEventListener("click", function () {
@@ -532,11 +592,9 @@
       state.winners = {};
     }
     renderEntries();
-    // If we have any filled player or winners, show bracket
-    var any = state.players.some(playerFilled) || Object.keys(state.winners).length > 0;
-    if (any) {
-      renderBracket();
-    }
+    var any =
+      state.players.some(playerFilled) || Object.keys(state.winners).length > 0;
+    if (any) renderBracket();
   }
 
   if (document.readyState === "loading") {
