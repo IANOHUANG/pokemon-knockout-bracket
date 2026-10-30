@@ -155,10 +155,19 @@ body {
   background: transparent;
   color: var(--text-muted);
   border: 1px solid var(--border);
-  margin-top: 0.3rem;
-  align-self: flex-start;
+  /* Out of flow so flex halves stay equal → elbow 25%/75% stays true */
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  margin: 0;
+  transform: translateY(100%);
+  z-index: 2;
 }
 .btn-clear-match:hover { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
+.match { margin-bottom: 1.35rem; }
+@media print {
+  .match { margin-bottom: 0 !important; }
+}
 
 .hint { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--text-muted); }
 
@@ -277,11 +286,15 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: stretch;
   gap: 1.25rem;
-  padding: 0 1.25rem;
-  min-width: 220px;
+  padding: 0;
+  min-width: 200px;
   align-self: center;
+}
+.bracket-center .final-block,
+.bracket-center .champion-block {
+  width: 100%;
 }
 
 .round {
@@ -404,7 +417,7 @@ body {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
+  justify-content: stretch;
   gap: 0;
   min-width: 0;
   min-height: 0;
@@ -412,9 +425,13 @@ body {
 .mpg-body > .match {
   flex: 1 1 0;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
 }
 .mpg-body > .match .match-pair {
-  flex-shrink: 0; /* keep card readable; stub targets this */
+  flex-shrink: 0;
 }
 
 .mpg-elbow {
@@ -429,8 +446,8 @@ body {
   overflow: visible;
 }
 .mpg-elbow.to-center {
-  flex-basis: calc(var(--elbow-w) + 0.7rem);
-  width: calc(var(--elbow-w) + 0.7rem);
+  flex-basis: calc(var(--elbow-w) + 1.15rem);
+  width: calc(var(--elbow-w) + 1.15rem);
 }
 .mpg-elbow > * {
   display: block;
@@ -442,43 +459,40 @@ body {
   box-sizing: border-box;
   border: none;
 }
-/* Horizontal stubs from measured card centers out to joiner */
+/* Pure CSS elbows: equal flex halves → centers at 25%/75% (no JS) */
 .mpg-elbow.is-fork .el-stub {
   height: var(--el-thick);
   width: var(--el-join-x);
   left: 0;
 }
 .mpg-elbow.is-fork .el-stub.top {
-  top: var(--y0, 25%);
+  top: 25%;
   transform: translateY(-50%);
 }
 .mpg-elbow.is-fork .el-stub.bot {
-  top: var(--y1, 75%);
+  top: 75%;
   transform: translateY(-50%);
 }
-/* Vertical joiner between feeder centers, in the gap */
 .mpg-elbow.is-fork .el-join {
   width: var(--el-thick);
-  top: var(--y0, 25%);
-  height: var(--join-h, 50%);
+  top: 25%;
+  height: 50%;
   left: var(--el-join-x);
   transform: translateX(-50%);
 }
-/* Out from joiner mid into next round */
 .mpg-elbow.is-fork .el-out {
   height: var(--el-thick);
   left: var(--el-join-x);
   right: 0;
   width: auto;
-  top: var(--ymid, 50%);
+  top: 50%;
   transform: translateY(-50%);
 }
-/* Single-feeder / side-final thru line */
 .mpg-elbow.is-line .el-thru {
   height: var(--el-thick);
   width: 100%;
   left: 0;
-  top: var(--ymid, 50%);
+  top: 50%;
   transform: translateY(-50%);
 }
 /* Right side: stubs on the card (right) side, out toward center (left) */
@@ -499,16 +513,17 @@ body {
 
 /* Final inbound rails + stem to champion */
 .final-row {
-  --rail-y: 50%;
   display: flex;
   align-items: center;
   width: 100%;
   gap: 0;
   position: relative;
 }
-.final-match-wrap { flex: 1 1 auto; min-width: 0; }
+.final-match-wrap { flex: 0 1 auto; min-width: 0; }
 .final-in-rail {
-  flex: 0 0 1.1rem;
+  flex: 1 1 1.25rem;
+  min-width: 1rem;
+  max-width: 2.75rem;
   align-self: stretch;
   position: relative;
   pointer-events: none;
@@ -517,9 +532,9 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  top: var(--rail-y, 50%);
+  top: 50%;
   transform: translateY(-50%);
-  height: 2px;
+  height: 2.5px;
   background: #64748b;
   border: none;
   -webkit-print-color-adjust: exact;
@@ -615,9 +630,12 @@ html.print-measure .match-pair-group {
   gap: 0 !important;
 }
 html.print-measure .mpg-body {
-  justify-content: space-around;
+  justify-content: stretch;
   gap: 0 !important;
   height: 100%;
+}
+html.print-measure .mpg-body > .match {
+  justify-content: center;
 }
 html.print-measure .match { flex: 1 1 auto; justify-content: center; }
 html.print-measure body.size-16 .player-meta,
@@ -686,6 +704,9 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
     max-width: 100%;
     margin: 0 auto !important;
   }
+  body.size-8 .print-scale-wrap { zoom: var(--print-scale, 1.08); }
+  body.size-16 .print-scale-wrap { zoom: var(--print-scale, 1.06); }
+  body.size-32 .print-scale-wrap { zoom: var(--print-scale, 1.02); }
 
   .bracket-mirror {
     gap: 0 !important;
@@ -704,11 +725,12 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
     flex-direction: row !important;
   }
   .bracket-center {
-    padding: 0 3mm !important;
+    padding: 0 !important;
     gap: 4mm !important;
     min-width: 0 !important;
     align-self: center !important;
     justify-content: center !important;
+    align-items: stretch !important;
   }
 
   .round {
@@ -740,9 +762,12 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
     gap: 0 !important;
   }
   .mpg-body {
-    justify-content: space-around !important;
+    justify-content: stretch !important;
     gap: 0 !important;
     height: 100% !important;
+  }
+  .mpg-body > .match {
+    justify-content: center !important;
   }
   .match {
     flex: 1 1 auto !important;
@@ -776,15 +801,19 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
   .bracket-side { gap: 0 !important; --elbow-w: 7.5mm !important; }
   .mpg-elbow { --el-thick: 1.2pt !important; --el-color: #64748b !important; }
   .mpg-elbow.to-center {
-    flex-basis: 9mm !important;
-    width: 9mm !important;
+    flex-basis: 11mm !important;
+    width: 11mm !important;
   }
-  .mpg-elbow > span {
+  .mpg-elbow > * {
     background: #64748b !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  .final-in-rail { flex-basis: 4mm !important; }
+  .final-in-rail {
+    flex: 1 1 5mm !important;
+    min-width: 4mm !important;
+    max-width: 10mm !important;
+  }
   .final-in-rail .rail-line,
   .final-to-champ .rail-line.vertical {
     background: #64748b !important;
@@ -796,7 +825,7 @@ html.print-measure body.size-32 .player-meta { display: none !important; }
   body.size-8 { --slot-w: 52mm; }
   body.size-8 .round { min-width: 52mm !important; }
   body.size-8 .bracket-side { gap: 0 !important; --elbow-w: 9mm !important; }
-  body.size-8 .bracket-center { padding: 0 6mm !important; }
+  body.size-8 .bracket-center { padding: 0 !important; }
   body.size-8 .player-name { font-size: 9pt !important; }
   body.size-8 .player-row { padding: 1.6mm 1.8mm !important; }
 
