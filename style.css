@@ -381,7 +381,8 @@ body {
 }
 
 /* Connectors — left side (lines go right toward center) */
-.bracket-side.left .match::after {
+.match-pair { position: relative; }
+.bracket-side.left .match-pair::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -389,6 +390,7 @@ body {
   width: 1.25rem;
   height: 1px;
   background: var(--connector);
+  z-index: 0;
 }
 .bracket-side.left .round:not(:last-child) .match-pair-group {
   position: relative;
@@ -405,7 +407,7 @@ body {
 }
 
 /* Connectors — right side (mirrored, lines go left toward center) */
-.bracket-side.right .match::before {
+.bracket-side.right .match-pair::before {
   content: "";
   position: absolute;
   top: 50%;
@@ -413,6 +415,7 @@ body {
   width: 1.25rem;
   height: 1px;
   background: var(--connector);
+  z-index: 0;
 }
 .bracket-side.right .match-pair-group {
   position: relative;
@@ -429,8 +432,8 @@ body {
 }
 
 /* Hide stubs on the round closest to center (side final feeds into center via center connectors) */
-.bracket-side.left .round.is-side-final .match::after,
-.bracket-side.right .round.is-side-final .match::before {
+.bracket-side.left .round.is-side-final .match-pair::after,
+.bracket-side.right .round.is-side-final .match-pair::before {
   width: 1.25rem;
 }
 .bracket-side.left .round.is-side-final .match-pair-group::after,
@@ -497,16 +500,38 @@ html.print-measure .controls,
 html.print-measure .entry-panel,
 html.print-measure .bracket-toolbar,
 html.print-measure .app-footer { display: none !important; }
-html.print-measure .bracket-side { gap: 2.5mm; }
-html.print-measure body.size-16 .player-meta { display: none !important; }
+html.print-measure .bracket-mirror {
+  min-height: var(--print-target-h, 170mm);
+  height: var(--print-target-h, 170mm);
+  align-items: stretch;
+}
+html.print-measure .bracket-side {
+  height: 100% !important;
+  align-self: stretch;
+  display: flex;
+  flex-direction: row;
+}
+html.print-measure .round {
+  height: 100% !important;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+html.print-measure .match-stack {
+  flex: 1 1 auto;
+  height: 100%;
+  justify-content: space-around;
+  min-height: 0;
+  gap: 0 !important;
+}
+html.print-measure .match-pair-group {
+  flex: 1 1 auto;
+  justify-content: space-around;
+  gap: 0 !important;
+}
+html.print-measure .match { flex: 1 1 auto; justify-content: center; }
+html.print-measure body.size-16 .player-meta,
 html.print-measure body.size-32 .player-meta { display: none !important; }
-html.print-measure body.size-32 .player-name { font-size: 5pt; }
-html.print-measure body.size-32 .player-row { padding: 0.15mm 0.4mm; min-height: 0; }
-html.print-measure body.size-32 .round { min-width: 24mm; }
-html.print-measure body.size-32 .round-title { font-size: 5pt; padding: 0.2mm 0.6mm; margin-bottom: 0.4mm; }
-html.print-measure body.size-32 .match-stack,
-html.print-measure body.size-32 .match-pair-group { gap: 0.25mm; }
-html.print-measure body.size-32 .bracket-side { gap: 1mm; }
 
 @media print {
   @page {
@@ -518,8 +543,6 @@ html.print-measure body.size-32 .bracket-side { gap: 1mm; }
     background: #fff !important;
     margin: 0 !important;
     padding: 0 !important;
-    width: auto !important;
-    height: auto !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -546,32 +569,12 @@ html.print-measure body.size-32 .bracket-side { gap: 1mm; }
     margin: 0 0 2mm 0 !important;
     background: #fff !important;
   }
-  .logo-mark .ball {
-    width: 18px !important;
-    height: 18px !important;
-    border-width: 1.5px !important;
-  }
-  .logo-mark .ball::after {
-    width: 6px !important;
-    height: 6px !important;
-    margin: -3px 0 0 -3px !important;
-    border-width: 1.5px !important;
-  }
-  .app-header h1 {
-    font-size: 11pt !important;
-    margin: 0 !important;
-  }
-  .subtitle {
-    font-size: 7.5pt !important;
-    margin: 0 !important;
-  }
+  .logo-mark .ball { width: 18px !important; height: 18px !important; border-width: 1.5px !important; }
+  .logo-mark .ball::after { width: 6px !important; height: 6px !important; margin: -3px 0 0 -3px !important; border-width: 1.5px !important; }
+  .app-header h1 { font-size: 11pt !important; margin: 0 !important; }
+  .subtitle { font-size: 7.5pt !important; margin: 0 !important; }
 
-  .app-main {
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
+  .app-main { max-width: none !important; margin: 0 !important; padding: 0 !important; }
   .bracket-section {
     box-shadow: none !important;
     border: none !important;
@@ -579,17 +582,12 @@ html.print-measure body.size-32 .bracket-side { gap: 1mm; }
     padding: 0 !important;
     background: transparent !important;
   }
-
-  .bracket-scroll {
-    overflow: visible !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
+  .bracket-scroll { overflow: visible !important; padding: 0 !important; margin: 0 !important; }
 
   .print-scale-wrap {
-    /* zoom affects layout/pagination in Chromium (unlike transform) */
     zoom: var(--print-scale, 1);
     width: max-content;
+    max-width: 100%;
     margin: 0 auto;
   }
 
@@ -597,27 +595,59 @@ html.print-measure body.size-32 .bracket-side { gap: 1mm; }
     gap: 0 !important;
     padding: 0 !important;
     min-width: 0 !important;
+    min-height: var(--print-target-h, 170mm) !important;
+    height: var(--print-target-h, 170mm) !important;
+    align-items: stretch !important;
   }
 
-  .bracket-side { gap: 2.5mm !important; }
+  .bracket-side {
+    gap: 3mm !important;
+    align-self: stretch !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+  }
   .bracket-center {
     padding: 0 3mm !important;
-    gap: 3mm !important;
+    gap: 4mm !important;
     min-width: 0 !important;
+    align-self: center !important;
+    justify-content: center !important;
   }
 
-  .round { min-width: 0 !important; max-width: none !important; }
+  .round {
+    min-width: 0 !important;
+    max-width: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-self: stretch !important;
+    height: 100% !important;
+  }
   .round-title {
     font-size: 7pt !important;
     padding: 0.8mm 1.5mm !important;
     margin-bottom: 1.5mm !important;
+    flex: 0 0 auto !important;
   }
 
-  .match {
+  .match-stack {
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    justify-content: space-around !important;
+    gap: 0 !important;
     min-height: 0 !important;
-    padding: 0.4mm 0 !important;
   }
-  .match-stack, .match-pair-group { gap: 1.2mm !important; }
+  .match-pair-group {
+    flex: 1 1 auto !important;
+    justify-content: space-around !important;
+    gap: 0 !important;
+  }
+  .match {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    padding: 0.5mm 0 !important;
+    justify-content: center !important;
+  }
   .match-pair {
     box-shadow: none !important;
     border-width: 0.6pt !important;
@@ -625,81 +655,78 @@ html.print-measure body.size-32 .bracket-side { gap: 1mm; }
 
   .player-row {
     min-height: 0 !important;
-    padding: 0.6mm 1mm !important;
+    padding: 0.8mm 1.2mm !important;
     gap: 0.8mm !important;
   }
-  .seed-num { font-size: 6.5pt !important; width: 3.5mm !important; }
-  .player-name { font-size: 7pt !important; }
+  .seed-num { font-size: 7pt !important; width: 4mm !important; }
+  .player-name { font-size: 7.5pt !important; }
   .player-meta { font-size: 5.5pt !important; }
-  .placeholder-text { font-size: 6.5pt !important; }
+  .placeholder-text { font-size: 7pt !important; }
 
-  .center-label { font-size: 6.5pt !important; margin-bottom: 1mm !important; }
-  .champion-card { padding: 2mm !important; }
-  .champion-label { font-size: 6pt !important; }
-  .champion-name { font-size: 8pt !important; }
-  .champion-meta { font-size: 6pt !important; }
-  .champion-empty { font-size: 7pt !important; }
+  .center-label { font-size: 7pt !important; margin-bottom: 1mm !important; }
+  .champion-card { padding: 2.5mm !important; }
+  .champion-label { font-size: 6.5pt !important; }
+  .champion-name { font-size: 9pt !important; }
+  .champion-meta { font-size: 6.5pt !important; }
+  .champion-empty { font-size: 7.5pt !important; }
 
-  /* Connector lines stay visible, slightly thinner */
-  .bracket-side.left .match::after,
-  .bracket-side.right .match::before,
+  /* Connectors from card centers */
+  .bracket-side.left .match-pair::after,
+  .bracket-side.right .match-pair::before,
   .bracket-side.left .match-pair-group::after,
   .bracket-side.right .match-pair-group::before {
     background: #64748b !important;
   }
-  .bracket-side.left .match::after,
-  .bracket-side.right .match::before {
-    width: 2.5mm !important;
+  .bracket-side.left .match-pair::after,
+  .bracket-side.right .match-pair::before {
+    width: 3mm !important;
   }
-  .bracket-side.left .match::after { right: -2.5mm !important; }
-  .bracket-side.right .match::before { left: -2.5mm !important; }
+  .bracket-side.left .match-pair::after { right: -3mm !important; }
+  .bracket-side.right .match-pair::before { left: -3mm !important; }
   .bracket-side.left .match-pair-group::after {
-    right: -2.5mm !important;
-    width: 0.6pt !important;
+    right: -3mm !important;
+    width: 0.7pt !important;
+    top: 25% !important;
+    bottom: 25% !important;
   }
   .bracket-side.right .match-pair-group::before {
-    left: -2.5mm !important;
-    width: 0.6pt !important;
+    left: -3mm !important;
+    width: 0.7pt !important;
+    top: 25% !important;
+    bottom: 25% !important;
   }
 
-  /* Per-size compact defaults (JS fine-tunes --print-scale) */
-  body.size-8 { --slot-w: 42mm; }
-  body.size-8 .player-row { padding: 1mm 1.2mm !important; }
-  body.size-8 .player-name { font-size: 8pt !important; }
-  body.size-8 .round { min-width: 42mm !important; }
+  body.size-8 { --slot-w: 52mm; }
+  body.size-8 .round { min-width: 52mm !important; }
+  body.size-8 .bracket-side { gap: 5mm !important; }
+  body.size-8 .bracket-center { padding: 0 6mm !important; }
+  body.size-8 .player-name { font-size: 9pt !important; }
+  body.size-8 .player-row { padding: 1.6mm 1.8mm !important; }
 
-  body.size-16 { --slot-w: 34mm; }
-  body.size-16 .round { min-width: 34mm !important; }
-  body.size-16 .player-meta { display: none !important; } /* name+seed only to save height */
-  body.size-16 .player-row { min-height: 5.5mm !important; }
+  body.size-16 { --slot-w: 36mm; }
+  body.size-16 .round { min-width: 36mm !important; }
+  body.size-16 .player-meta { display: none !important; }
+  body.size-16 .player-row { padding: 1mm 1.2mm !important; }
 
-  body.size-32 { --slot-w: 24mm; }
-  body.size-32 .round { min-width: 24mm !important; max-width: 26mm !important; }
+  body.size-32 { --slot-w: 28mm; }
+  body.size-32 .round { min-width: 28mm !important; max-width: 32mm !important; }
   body.size-32 .player-meta { display: none !important; }
-  body.size-32 .player-name { font-size: 5pt !important; line-height: 1.1 !important; }
-  body.size-32 .seed-num { font-size: 5pt !important; width: 2.8mm !important; }
-  body.size-32 .player-row { padding: 0.15mm 0.4mm !important; min-height: 0 !important; }
-  body.size-32 .round-title { font-size: 5pt !important; padding: 0.2mm 0.6mm !important; margin-bottom: 0.4mm !important; }
-  body.size-32 .match { padding: 0.1mm 0 !important; }
-  body.size-32 .match-stack, body.size-32 .match-pair-group { gap: 0.25mm !important; }
-  body.size-32 .bracket-side { gap: 1mm !important; }
-  body.size-32 .bracket-center { padding: 0 1.5mm !important; gap: 1.5mm !important; }
-  body.size-32 .champion-card { padding: 0.8mm !important; }
-  body.size-32 .champion-label { font-size: 5pt !important; }
-  body.size-32 .champion-name { font-size: 6pt !important; }
-  body.size-32 .placeholder-text { font-size: 5pt !important; }
-  body.size-32 .bracket-side.left .match::after,
-  body.size-32 .bracket-side.right .match::before { width: 1mm !important; }
-  body.size-32 .bracket-side.left .match::after { right: -1mm !important; }
-  body.size-32 .bracket-side.right .match::before { left: -1mm !important; }
-  body.size-32 .bracket-side.left .match-pair-group::after { right: -1mm !important; }
-  body.size-32 .bracket-side.right .match-pair-group::before { left: -1mm !important; }
+  body.size-32 .player-name { font-size: 6pt !important; }
+  body.size-32 .seed-num { font-size: 5.5pt !important; }
+  body.size-32 .player-row { padding: 0.5mm 0.8mm !important; }
+  body.size-32 .round-title { font-size: 6pt !important; margin-bottom: 1mm !important; }
+  body.size-32 .bracket-side { gap: 2mm !important; }
+  body.size-32 .bracket-side.left .match-pair::after,
+  body.size-32 .bracket-side.right .match-pair::before { width: 2mm !important; }
+  body.size-32 .bracket-side.left .match-pair::after { right: -2mm !important; }
+  body.size-32 .bracket-side.right .match-pair::before { left: -2mm !important; }
+  body.size-32 .bracket-side.left .match-pair-group::after { right: -2mm !important; }
+  body.size-32 .bracket-side.right .match-pair-group::before { left: -2mm !important; }
 
   .player-row, .match-pair, .champion-card, .match {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-
   .bracket-section, .bracket-scroll, .print-scale-wrap, .bracket-mirror {
     page-break-inside: avoid;
     break-inside: avoid;
